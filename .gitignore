@@ -6,5 +6,8 @@
 *.so
 *.bak
 Program
-*.creator.user
+*.files
+*.includes
+*.creator*
+/*.config
 android/apk/app/build/*
