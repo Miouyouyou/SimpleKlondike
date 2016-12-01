@@ -12,3 +12,4 @@ Program
 /*.config
 android/apk/app/build/*
 /test-*
+*.save
