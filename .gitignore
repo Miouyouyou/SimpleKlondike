@@ -11,3 +11,4 @@ Program
 *.creator*
 /*.config
 android/apk/app/build/*
+/test-*
