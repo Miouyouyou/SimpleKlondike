@@ -1,0 +1,10 @@
+*.txt
+*~
+\#*
+*#
+*.o
+*.so
+*.bak
+Program
+*.creator.user
+android/apk/app/build/*

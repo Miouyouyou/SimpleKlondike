@@ -1,0 +1,7 @@
+ [ ] Wrap filesystems operations around abstract functions implemented
+     in the different Operating System management source code.
+     For example :
+     - On Android, wrap these functions around AAssetsManager
+     - On PC, wrap these functions around open/close
+ [ ] Restart menu
+ [ ] Winning menu
