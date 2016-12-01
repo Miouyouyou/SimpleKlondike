@@ -119,8 +119,8 @@ void myy_init_drawing() {
                                  gl_elements.sample_selection_address,
                                  gl_elements.selection_quads_address);
 
-  uploadTextures("textures/all_cards_tex.raw\0"
-                 "textures/table_background.raw\0", 2, cards_tex);
+  glhUploadTextures("textures/all_cards_tex.raw\0"
+                    "textures/table_background.raw\0", 2, cards_tex);
   glhActiveTextures(cards_tex, 2);
   GLprogram =
     glhSetupAndUse("shaders/standard.vert", "shaders/standard.frag",

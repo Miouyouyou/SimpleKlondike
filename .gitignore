@@ -13,3 +13,6 @@ Program
 android/apk/app/build/*
 /test-*
 *.save
+android/apk/.gradle
+android/apk/app/src/main/assets/shaders
+android/apk/app/src/main/assets/textures

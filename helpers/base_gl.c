@@ -4,6 +4,7 @@
 #include <helpers/file.h>
 #include <helpers/string.h>
 #include <helpers/log.h>
+#include <helpers/myy_fs.h>
 
 #include <sys/types.h> // read, write, fstat, open
 #include <sys/stat.h> // fstat, open
@@ -54,7 +55,7 @@ int glhLoadShader(GLenum shaderType, const char *name, GLuint program) {
 
   if (shader) {
     LOG("Shader %s seems ok...\n", name);
-    fh_FileToStringBuffer(name, (char *) scratch, SCRATCH_SPACE);
+    fh_ReadFileToStringBuffer(name, scratch, SCRATCH_SPACE);
     const char *pSource = scratch;
     glShaderSource(shader, 1, &pSource, NULL);
     glCompileShader(shader);
@@ -105,7 +106,35 @@ static void setupTexture() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 }
 
-void uploadTextures(const char *textures_names, int n, GLuint *texid) {
+/** Create n textures buffers and upload the content of
+ *  each \0 separated filename in "textures_names" into these buffers.
+ *
+ * Example :
+ * GLuint textures_id[2];
+ * glhUploadTextures("tex/first_tex.raw\0tex/second_tex.raw\0", 2,
+ *                   textures_id);
+ *
+ * CAUTION :
+ * - This will replace the current active texture binding by a binding
+ *   to the last texture uploaded.
+ *
+ * PARAMS :
+ * @param textures_names The filepaths of the textures to upload
+ *                       This is implementation specific.
+ *                       For example, tex/first_tex.raw will be read
+ *                       from the current Asset archive on Android.
+ *
+ * @param n              The number of textures to upload
+ *
+ * @param texid          The buffer receiving the generated textures id
+ *
+ * ADVICE :
+ *   Once the textures uploaded, use glhActiveTextures to enable
+ * multi-texturing.
+ */
+void glhUploadTextures
+(const char * const textures_names, const int n,
+ GLuint * const texid) {
   /* OpenGL 2.x way to load textures is certainly NOT intuitive !
    * From what I understand :
    * - The current activated texture unit is changed through
@@ -130,30 +159,24 @@ void uploadTextures(const char *textures_names, int n, GLuint *texid) {
 
     LOG("Loading texture : %s\n", current_name);
 
-    struct stat boeuf;
-    int fd = open(current_name, O_RDONLY);
-    if (fd != -1) {
-      fstat(fd, &boeuf);
-      uint32_t width, height, gl_format, gl_type;
-      read(fd, &width, 4);
-      read(fd, &height, 4);
-      read(fd, &gl_format, 4);
-      read(fd, &gl_type, 4);
-      LOG("Read %zd bytes\n", read(fd, scratch, boeuf.st_size));
-      close(fd);
+    if (fh_WholeFileToBuffer(current_name, scratch)) {
+
+      uint32_t
+        width     = ((uint32_t *) scratch)[0],
+        height    = ((uint32_t *) scratch)[1],
+        gl_format = ((uint32_t *) scratch)[2],
+        gl_type   = ((uint32_t *) scratch)[3];
+
       glBindTexture(GL_TEXTURE_2D, texid[i]);
       glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, gl_format, gl_type, scratch);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                   gl_format, gl_type, (uint32_t *) scratch+4);
       setupTexture();
       sh_pointToNextString(current_name);
+
     }
     else {
       LOG("You're sure about that file : %s ?\n", current_name);
-      char *current_dir_name = getcwd(malloc(256), 256);
-      if (current_dir_name) {
-        LOG("--- Current directory : %s\n", current_dir_name);
-        free(current_dir_name);
-      }
       exit(1);
     }
   }

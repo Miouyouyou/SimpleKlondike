@@ -32,12 +32,15 @@ static struct current_window {
   uint16_t width, height;
 } current_window;
 
+AAssetManager *myy_assets_manager;
+
 /**
  * Initialize an EGL context for the current display.
  */
 static int add_egl_context_to
-(NativeWindowType window, struct egl_elements *e,
- struct current_window *window_infos) {
+(NativeWindowType const window,
+ struct egl_elements * restrict const e,
+ struct current_window * restrict const window_infos) {
   // initialize OpenGL ES and EGL
 
   /*
@@ -72,9 +75,8 @@ static int add_egl_context_to
   surface = eglCreateWindowSurface(display, config, window, NULL);
   context = eglCreateContext(display, config, NULL, GiveMeGLES2);
 
-  if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {
-      return -1;
-  }
+  if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE)
+    return -1;
 
   e->context = context;
   e->display = display;
@@ -92,11 +94,11 @@ static int add_egl_context_to
   return 0;
 }
 
-static void egl_sync(struct egl_elements* e) {
+static void egl_sync(struct egl_elements* const e) {
   eglSwapBuffers(e->display, e->surface);
 }
 
-static void egl_stop(struct egl_elements* e) {
+static void egl_stop(struct egl_elements* const e) {
   if (e->display != EGL_NO_DISPLAY) {
     eglMakeCurrent(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     if (e->context != EGL_NO_CONTEXT)
@@ -122,7 +124,7 @@ int animating;
  */
 unsigned long last_tap = 0;
 static int32_t engine_handle_input
-(struct android_app* app, AInputEvent* event) {
+(struct android_app * const app, AInputEvent * const event) {
   // int pc = AMotionEvent_getPointerCount(event);
   // for (int p = 0; p < pc; p++)
 
@@ -156,7 +158,8 @@ struct myy_game_state game_state = {0};
 /**
  * Process the next main command.
  */
-static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
+static void engine_handle_cmd
+(struct android_app * const app, const int32_t cmd) {
 
   struct egl_elements *e = &egl;
   struct myy_game_state *state = &game_state;
@@ -210,9 +213,7 @@ void android_main(struct android_app* app) {
   app->onAppCmd = engine_handle_cmd;
   app->onInputEvent = engine_handle_input;
 
-  // Copy assets files into the internalDataPath folder
-  goto_data_dir(app->activity->internalDataPath);
-  /*copy_assets_to_internal_memory(app->activity->assetManager);*/
+  myy_assets_manager = app->activity->assetManager;
 
   // loop waiting for stuff to do.
 

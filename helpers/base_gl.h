@@ -149,7 +149,9 @@ GLuint glhSetupProgram(
   const char* attributes_names);
 GLuint glhSetupAndUse(const char* vsh_filename, const char* fsh_filename,
                       uint8_t n_attributes, const char* attributes_names);
-void uploadTextures(const char *textures_names, int n, GLuint *texid);
+void glhUploadTextures
+(const char * const textures_names, const int n,
+ GLuint * const texid);
 void glhActiveTextures(GLuint *texids, int n_textures);
 void copy_two_triangles_quad_with_offset(GLfloat *model_coords,
                                          GLfloat x_offset, GLfloat y_offset,

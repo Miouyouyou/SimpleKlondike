@@ -1,7 +1,7 @@
-OBJS = main.o init_window.o
+OBJS = main.o init_window.o file.o
 CC = gcc
 CFLAGS = -march=native -O3
-INCLUDE_DIRS = -I.
+INCLUDE_DIRS = -I. -I..
 CCC = $(CC) $(CFLAGS) $(INCLUDE_DIRS)
 
 PROGRAM = Program
@@ -17,6 +17,9 @@ main.o: main.c
 
 init_window.o: init_window.c
 	$(CCC) -c init_window.c
+
+file.o: helpers/file.c
+	$(CCC) -c helpers/file.c
 
 libmyy.so: myy.c
 	$(CCC) --shared -o libmyy.so myy.c
