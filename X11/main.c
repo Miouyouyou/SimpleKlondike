@@ -5,11 +5,15 @@ int main() {
 
   CreateWindowWithEGLContext("Nya !", 1280, 720);
   myy_display_initialised(1280, 720);
-  myy_init();
+  myy_generate_new_state();
+  myy_init_drawing();
 
   while(!UserInterrupt()) {
     myy_draw();
     RefreshWindow();
   }
+
+  myy_stop();
+  myy_cleanup_drawing();
 
 }

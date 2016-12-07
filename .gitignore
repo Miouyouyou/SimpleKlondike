@@ -16,3 +16,7 @@ android/apk/app/build/*
 android/apk/.gradle
 android/apk/app/src/main/assets/shaders
 android/apk/app/src/main/assets/textures
+Generator/*/*.png
+Generator/*/*.svg
+Generator/*/*.bmp
+Generator/*/*.raw

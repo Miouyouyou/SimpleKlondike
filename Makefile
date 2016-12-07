@@ -1,5 +1,7 @@
-OBJS = base_gl.o gl_cards.o basics.o klondike.o myy.o
-CC = gcc
+OBJS = base_gl.o gl_cards.o basics.o klondike.o menus.o myy.o
+X11_OBJS = X11/main.o X11/init_window.o X11/file.o
+X11_LDFLAGS = -lX11 -lEGL
+CC = clang
 CFLAGS = -march=native -fPIC -g3 -fuse-ld=gold
 INCLUDE_DIRS = -I.
 LDFLAGS = -lGLESv2
@@ -8,12 +10,11 @@ CCC = $(CC) $(CFLAGS) $(INCLUDE_DIRS)
 LIBRARY = libmyy.so
 
 .PHONY: all
-all: x11 $(LIBRARY)
+all: x11
 
 .PHONY: x11
-x11:
-	$(MAKE) -C X11 all
-	cp X11/Program ./
+x11: $(OBJS) $(X11_OBJS)
+	$(CCC) -o Program $(OBJS) $(X11_OBJS) $(LDFLAGS) $(X11_LDFLAGS)
 
 .PHONY: distclean
 distclean: clean
@@ -24,6 +25,15 @@ tests: test-selection
 
 $(LIBRARY): $(OBJS)
 	$(CCC) --shared -o libmyy.so $(OBJS) $(LDFLAGS)
+
+X11/main.o: X11/main.c
+	$(CCC) -c X11/main.c -o X11/main.o
+
+X11/init_window.o: X11/init_window.c X11/init_window.h
+	$(CCC) -c X11/init_window.c -o X11/init_window.o
+
+X11/file.o: X11/helpers/file.c helpers/file.h
+	$(CCC) -c X11/helpers/file.c -o X11/file.o
 
 myy.o: myy.c
 	$(CCC) -c myy.c
@@ -39,6 +49,9 @@ basics.o: cards_logic/basics.c
 
 gl_cards.o: cards_logic/gl_cards.c
 	$(CCC) -c cards_logic/gl_cards.c
+
+menus.o: opengl/menus.c opengl/menus.h
+	$(CCC) -c opengl/menus.c
 
 test-selection.o: tests/test-selection.c
 	$(CCC) -c tests/test-selection.c
@@ -61,12 +74,13 @@ test-quickmove: test-quickmove.o klondike.o basics.o
 .PHONY: clean
 clean:
 	$(RM) *.{o,so} $(LIBRARY)
+	$(RM) test-*
 
 ANDROID_CFLAGS = -fPIC -D__ANDROID__ -DANDROID -O3 -mthumb -mthumb-interwork -fuse-ld=gold -mfloat-abi=softfp -std=c11 -nostdlib
 ANDROID_BASE_DIR = $(ANDROID_NDK_HOME)/platforms/android-15/arch-arm/usr
 ANDROID_CC = armv7a-hardfloat-linux-gnueabi-gcc
 ANDROID_CCC = $(ANDROID_CC) $(ANDROID_CFLAGS) -I$(ANDROID_BASE_DIR)/include -I.
-ANDROID_LDFLAGS = -Wl,-soname=libmain.so,--dynamic-linker=/system/bin/linker,--hash-style=sysv -L$(ANDROID_BASE_DIR)/lib -lEGL -lGLESv2 -llog -landroid -lc
+ANDROID_LDFLAGS = -Wl,-Bsymbolic,-znow,-soname=libmain.so,--dynamic-linker=/system/bin/linker,--hash-style=sysv -L$(ANDROID_BASE_DIR)/lib -lEGL -lGLESv2 -llog -landroid -lc
 ANDROID_OBJS = android_native_app_glue.o android_dummy_main.o android_file.o
 ANDROID_APK_PATH = ./android/apk
 ANDROID_APK_LIB_PATH = $(ANDROID_APK_PATH)/app/src/main/jniLibs

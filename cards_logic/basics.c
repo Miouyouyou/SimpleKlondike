@@ -3,8 +3,13 @@
 
 #include <string.h> // memcpy
 #include <stdlib.h> // random
+#include <time.h>
 
-struct s_selection selection = { .zone = 0, .done = 0, .move_only_top_card = 0 };
+struct s_selection selection = {
+  .zone = 0,
+  .done = 0,
+  .move_only_top_card = 0
+};
 
 void print_deck(carte *deck_to_print, unsigned int n) {
   for (unsigned int i = 0; i < n; i++) {
@@ -16,10 +21,24 @@ void print_deck(carte *deck_to_print, unsigned int n) {
 void shuffled_deck_from_base_deck
 (carte *deck, const carte *base_deck,
  unsigned int deck_size, unsigned int passes) {
+
   memcpy(deck, base_deck, sizeof(carte)*deck_size);
+
+  /* rand works "as intended" on Android, which mean it always provide
+   * the same random values if you do not set the seed.
+   * This is BRILLIANT !
+   * Every time I ask for a random value, I want to receive the same
+   * value as the other time ! Of course !
+   */
+
+  // Garbage : The best source of entropy ! © HopunEshEshEll
+  // If you're a package maintainer, please don't initialise this.
+  volatile unsigned int garbage_entropy;
+  srand(garbage_entropy + (unsigned int) time((time_t *) NULL));
+
   while(passes--) {
     for (int n = 0; n < deck_size; n++) {
-      unsigned int random_i = (unsigned int) (random()%deck_size);
+      unsigned int random_i = (unsigned int) (rand() % deck_size);
       carte swapped = deck[random_i];
       deck[random_i] = deck[n];
       deck[n] = swapped;
@@ -29,13 +48,13 @@ void shuffled_deck_from_base_deck
 
 unsigned int distribute_n_cards_from_deck
 (unsigned int cursor, unsigned int n, struct s_zone *zone, carte *src) {
-  LOG("start from : %d, n : %d\n", cursor, n);
+  /*LOG("start from : %d, n : %d\n", cursor, n);*/
   carte *dst = zone->cartes;
   for (unsigned int i = 0; i < n; i++, cursor++) dst[i] = src[cursor];
   zone->placees += n;
-  LOG("Distributed %d cards\n", n);
+  /*LOG("Distributed %d cards\n", n);
   LOG("Cards in zone : %d\n", zone->placees);
-  LOG("Destination deck :\n");
+  LOG("Destination deck :\n");*/
   print_deck(dst, n);
   return cursor;
 }

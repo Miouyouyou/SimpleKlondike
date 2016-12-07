@@ -573,18 +573,29 @@ void regen_and_store_selection_quad
                   &(selection_quads->top));
 }
 
-enum hitbox_zones determine_clicked_zone(int8_t glx, int8_t gly) {
-  enum hitbox_zones i = hitbox_pioche;
-  while(i < hitbox_unknown) {
-    struct hitbox *current_hitbox = zones_hitboxes+i;
+unsigned int determine_hitbox_id_glbyte
+(int8_t const x, int8_t const y,
+ const struct hitbox * restrict const hitboxes,
+ unsigned int const n_hitboxes) {
 
-    if (glx < current_hitbox->range[0].x || gly > current_hitbox->range[0].y ||
-        glx > current_hitbox->range[1].x || gly < current_hitbox->range[1].y) {
-      i++;
+  unsigned int i = 0;
+  while(i < n_hitboxes) {
+    struct hitbox *current_hitbox = hitboxes+i;
+
+    if (x < current_hitbox->range[0].x || y > current_hitbox->range[0].y ||
+        x > current_hitbox->range[1].x || y < current_hitbox->range[1].y) {
+      i++; continue;
     }
-    else break;
+
+    break;
   }
   return i;
+}
+
+enum hitbox_zones determine_clicked_zone(int8_t glx, int8_t gly) {
+  return
+    (enum hitbox_zones)
+    determine_hitbox_id_glbyte(glx, gly, zones_hitboxes, hitbox_unknown);
 }
 
 enum zones determine_zone_type(enum hitbox_zones z) {

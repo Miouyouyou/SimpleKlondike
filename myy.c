@@ -6,6 +6,9 @@
 #include <helpers/struct.h>
 #include <helpers/log.h>
 
+#include <opengl/menus.h>
+#include <opengl/global.h>
+
 #include <cards_logic/basics.h>
 #include <cards_logic/klondike.h>
 #include <cards_logic/gl_cards.h>
@@ -33,8 +36,15 @@ extern carte base_deck[];
 extern carte deck[];
 extern uint8_t scratch[];
 
-enum gl_attributes { attr_xyz, attr_st, attrs_n };
-enum gl_uniforms { unif_background };
+/* To remove after testing */
+unsigned int show_menus = 0;
+enum menus_names menu_to_show = pause_menu;
+
+void hide_menus() { show_menus = 0; }
+void open_website(const char * const name) {
+  LOG("Opening %s\n", name);
+}
+
 void myy_display_initialised(unsigned int width, unsigned int height) {
   gl_elements.width = width; gl_elements.height = height;
 }
@@ -50,7 +60,10 @@ void myy_cleanup_drawing() {
 }
 
 void myy_generate_new_state() {
+  remove_selection(&selection);
   generate_new_deck(deck, base_deck, DECK_SIZE, SHUFFLE_PASSES);
+
+  klondike_reset_game_elements(&elements_du_jeu);
   distribute_deck(deck, &elements_du_jeu);
 }
 
@@ -73,55 +86,88 @@ void myy_resume_state(struct myy_game_state *state) {
     myy_generate_new_state();
 }
 
-void myy_init_drawing() {
-  struct generated_parts parts_generated =
-    generer_coordonnees_elements_du_jeu(gl_elements.zones_du_jeu,
-      gl_elements.transparent_quads_address,
-      gl_elements.sample_card_top_address,
-      gl_elements.opaque_quads_address,
-      gl_elements.sample_card_body_address
-    );
+inline void bind_current_card_buffer
+(struct gl_elements * const gl_elements) {
+  glBindBuffer(
+    GL_ARRAY_BUFFER,
+    gl_elements->coords_buffers[gl_elements->current_buffer_id]
+  );
+}
 
-  glGenBuffers(2, gl_elements.coords_buffers);
+extern void bind_current_card_buffer
+(struct gl_elements * const gl_elements);
+
+void prepare_cards_buffers
+(struct gl_elements * const gl_elements) {
+
+  glGenBuffers(2, gl_elements->coords_buffers);
   /* The 52 cards + 4 stack marks + 2 pool marks +
      Background + Selection (3 parts) */
-  unsigned int gpu_buf_size =
+  const unsigned int gpu_buf_size =
     (58*3)*sizeof(GLCard) +
     sizeof(BUS_two_tris_3D_quad) +
     sizeof(struct GLSelection);
-  glBindBuffer(GL_ARRAY_BUFFER, gl_elements.coords_buffers[0]);
+  glBindBuffer(GL_ARRAY_BUFFER, gl_elements->coords_buffers[0]);
   glBufferData(GL_ARRAY_BUFFER, gpu_buf_size, NULL, GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, gl_elements.coords_buffers[1]);
+  glBindBuffer(GL_ARRAY_BUFFER, gl_elements->coords_buffers[1]);
   glBufferData(GL_ARRAY_BUFFER, gpu_buf_size, NULL, GL_DYNAMIC_DRAW);
 
-  // Double buffering flip-flop switch
-  unsigned int current_buffer_id = gl_elements.current_buffer_id;
-  /*current_buffer_id ^= 1;*/
-  glBindBuffer(GL_ARRAY_BUFFER,
-               gl_elements.coords_buffers[current_buffer_id]);
-  /*gl_elements.current_buffer_id = current_buffer_id;*/
+  bind_current_card_buffer(gl_elements);
+
+}
+
+void gen_current_cards_coordinates
+(struct gl_elements * const gl_elements) {
+  struct generated_parts const parts_generated =
+    generer_coordonnees_elements_du_jeu(
+      gl_elements->zones_du_jeu,
+      gl_elements->transparent_quads_address,
+      gl_elements->sample_card_top_address,
+      gl_elements->opaque_quads_address,
+      gl_elements->sample_card_body_address
+    );
 
   stocker_coordonnees_elements_du_jeu(
-    gl_elements.opaque_quads_address,
+    gl_elements->opaque_quads_address,
     parts_generated.opaque_quads,
-    gl_elements.transparent_quads_address,
+    gl_elements->transparent_quads_address,
     parts_generated.transparent_quads,
-    gl_elements.background_address
+    gl_elements->background_address
   );
 
-  gl_elements.n_opaque_points =
+  gl_elements->n_opaque_points =
     parts_generated.opaque_quads * two_triangles_corners;
-  gl_elements.n_transparent_points =
+  gl_elements->n_transparent_points =
     parts_generated.transparent_quads * two_triangles_corners;
 
-  regen_and_store_selection_quad(&selection,
-                                 gl_elements.n_opaque_points,
-                                 gl_elements.sample_selection_address,
-                                 gl_elements.selection_quads_address);
+  regen_and_store_selection_quad(
+    &selection,
+    gl_elements->n_opaque_points,
+    gl_elements->sample_selection_address,
+    gl_elements->selection_quads_address
+  );
+}
+
+void basic_klondike_restart() {
+  myy_generate_new_state();
+  regen_cards_coords(&gl_elements);
+  regen_and_store_selection_quad(
+    &selection, gl_elements.n_opaque_points,
+    gl_elements.sample_selection_address,
+    gl_elements.selection_quads_address
+  );
+}
+
+void myy_init_drawing() {
+
+  prepare_menus_buffers();
+  prepare_cards_buffers(&gl_elements);
+  gen_current_cards_coordinates(&gl_elements);
 
   glhUploadTextures("textures/all_cards_tex.raw\0"
-                    "textures/table_background.raw\0", 2, cards_tex);
-  glhActiveTextures(cards_tex, 2);
+                    "textures/table_background.raw\0"
+                    "textures/menus.raw\0", 3, cards_tex);
+  glhActiveTextures(cards_tex, 3);
   GLprogram =
     glhSetupAndUse("shaders/standard.vert", "shaders/standard.frag",
                    2, "xyz\0st");
@@ -141,6 +187,11 @@ void myy_init_drawing() {
 
 void myy_init() {}
 
+void show_menu(enum menus_names menu) {
+  show_menus = 1;
+  menu_to_show = menu;
+  LOG("Showing menu : %d\n", menu);
+}
 
 void myy_draw() {
   glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
@@ -160,25 +211,42 @@ void myy_draw() {
     card_transparent_points = gl_elements.n_transparent_points;
 
   uint8_t *current_offset = 0;
+
+  if (show_menus) draw_menu(menu_to_show, &gl_elements);
   /*
    * This could be reduced to 6 Vertex + Draw calls and 3 Blending calls.
    * The only reason for all these calls is because Cards coordinates are in
    * bytes and selection coordinates are in short.
-   * Two solutions to this :
+   * Three solutions to this :
    * - Convert cards coordinates to GLshort. This will increase the memory
    *   footprint by 4 bytes per point, for a total of 72 bytes per full
    *   quad (opaque + 2 transparent parts).
+   *
    * - Encode the selection coordinates in byte and generate the border
    *   inside a shader program. Another program will be needed, though.
    *   Note that, the program is using GLshort instead of GLbyte for
    *   the selection quad, because generating a border with the same
    *   number of pixels in width and height is very difficult with
    *   GLbyte, due to the lack of precision.
+   *
+   * - Avoid redrawing everything every frame and generate a snapshot
+   *   of the cards on each move, using a render to texture.
+   *   This would reduce the draw calls to one, at the cost of keeping
+   *   an entire screen screenshot in memory
+   *   (4~8 MB for a 1080p screen)
+   *   Note that this technique would also remove the need to pre-
+   *   compute the coordinates and leave everything to the GPU shaders.
+   *   The next version should feature such technique, as it should
+   *   lower the battery consumption on mobile hardware.
+   *
    * Avoid :
    * - Using a different buffer for the selection. It won't solve this
    *   problem since, in order to avoid overdraw of opaque quads,
    *   you'll need to display things in the following order.
    */
+
+  bind_current_card_buffer(&gl_elements);
+  glUniform1i(gl_elements.uniforms[unif_background], 0);
 
   /* Disable Blending */
   glDisable(GL_BLEND);
@@ -234,7 +302,7 @@ void myy_draw() {
 
 
 
-inline struct byte_point_2D normalise
+struct byte_point_2D normalise
 (const int x, const int y,
  const float width, const float height) {
   struct byte_point_2D coords = {
@@ -244,9 +312,12 @@ inline struct byte_point_2D normalise
   return coords;
 }
 
-extern struct byte_point_2D normalise
+/*extern struct byte_point_2D normalise
 (const int x, const int y,
- const float width, const float height);
+ const float width, const float height);*/
+
+extern struct menu_hitboxes menus_hitboxes;
+extern struct menu_actions menus_actions;
 
 void myy_click
 (int x, int y, unsigned int button) {
@@ -254,60 +325,76 @@ void myy_click
   struct byte_point_2D norm_coords =
     normalise(x, y, gl_elements.width, gl_elements.height);
 
-  enum hitbox_zones h_z =
-    determine_clicked_zone(norm_coords.x, norm_coords.y);
+  if (show_menus == 0) {
+    enum hitbox_zones h_z =
+      determine_clicked_zone(norm_coords.x, norm_coords.y);
 
-  LOG("norm_coords.x : %d - norm_coords.y : %d\n",
-      norm_coords.x, norm_coords.y);
-  enum zones z_t = determine_zone_type(h_z);
+    LOG("norm_coords.x : %d - norm_coords.y : %d - h_z : %d\n",
+        norm_coords.x, norm_coords.y, h_z);
+    enum zones z_t = determine_zone_type(h_z);
 
-  LOG("Hitbox : %d\n", h_z);
+    LOG("Hitbox : %d\n", h_z);
 
-  unsigned int changed_cards = 0;
-  if (h_z != hitbox_unknown) { 
-    struct s_zone* const clicked_zone = gl_elements.zones_du_jeu[h_z];
-    if (z_t == zone_deck) {
-      struct s_pioche * const pioche = (struct s_pioche *) clicked_zone;
-      struct s_piochees * const piochees =
-        (struct s_piochees *) gl_elements.zones_du_jeu[hitbox_piochees];
-      LOG("%p == %p ?\n",
-          piochees, gl_elements.zones_du_jeu[hitbox_piochees]);
-      if (pioche->max) {
-        if (pioche->placees)
-          draw_cards(MAX_CARDS_IN_WASTE, pioche, piochees);
-        else reset_pool(pioche, piochees);
-        changed_cards = 1;
+    unsigned int changed_cards = 0;
+    if (h_z != hitbox_unknown) {
+      struct s_zone* const clicked_zone = gl_elements.zones_du_jeu[h_z];
+      if (z_t == zone_deck) {
+        struct s_pioche * const pioche = (struct s_pioche *) clicked_zone;
+        struct s_piochees * const piochees =
+          (struct s_piochees *) gl_elements.zones_du_jeu[hitbox_piochees];
+        LOG("%p == %p ?\n",
+            piochees, gl_elements.zones_du_jeu[hitbox_piochees]);
+        if (pioche->max) {
+          if (pioche->placees)
+            draw_cards(MAX_CARDS_IN_WASTE, pioche, piochees);
+          else reset_pool(pioche, piochees);
+          changed_cards = 1;
+        }
+      }
+      else {
+
+        if (IS_FACE_UP( TOP_CARD_IN(((struct s_suites *) clicked_zone))) ) {
+          if (selection.done) {
+            changed_cards = move_selected_cards_to(clicked_zone, z_t, &selection);
+            if (changed_cards) remove_selection(&selection);
+            else start_selection_from(clicked_zone, z_t, &selection);
+          }
+          else start_selection_from(clicked_zone, z_t, &selection);
+          //regen_selection_around(&selection, clicked_zone);
+        } // Turning cards automatically would avoid such stupid checks
+        else {
+          TURN_CARD(TOP_CARD_IN(((struct s_suites*) clicked_zone)));
+          changed_cards = 1;
+        }
       }
     }
     else {
-
-      if (IS_FACE_UP( TOP_CARD_IN(((struct s_suites *) clicked_zone))) ) {
-        if (selection.done) {
-          changed_cards = move_selected_cards_to(clicked_zone, z_t, &selection);
-          if (changed_cards) remove_selection(&selection);
-          else start_selection_from(clicked_zone, z_t, &selection);
-        }
-        else start_selection_from(clicked_zone, z_t, &selection);
-        //regen_selection_around(&selection, clicked_zone);
-      } // Turning cards automatically would avoid such stupid checks
-      else {
-        TURN_CARD(TOP_CARD_IN(((struct s_suites*) clicked_zone)));
-        changed_cards = 1;
-      }
+      remove_selection(&selection);
+      //regen_selection_around(&selection, (struct s_zone *) 0);
     }
+
+    LOG("Selection done ? %d\n", selection.done);
+    if (changed_cards) regen_cards_coords(&gl_elements);
+    regen_and_store_selection_quad(&selection,
+                                   gl_elements.n_opaque_points,
+                                   gl_elements.sample_selection_address,
+                                   gl_elements.selection_quads_address);
   }
   else {
-    remove_selection(&selection);
-    //regen_selection_around(&selection, (struct s_zone *) 0);
+    switch (menu_to_show) {
+    case pause_menu:
+      handle_pause_clicks(norm_coords.x, norm_coords.y,
+                          &menus_hitboxes,
+                          &menus_actions);
+      break;
+    case win_menu:
+      handle_win_clicks(norm_coords.x, norm_coords.y,
+                        &menus_hitboxes,
+                        &menus_actions);
+      break;
+    }
+
   }
-
-  LOG("Selection done ? %d\n", selection.done);
-  if (changed_cards) regen_cards_coords(&gl_elements);
-  regen_and_store_selection_quad(&selection,
-                                 gl_elements.n_opaque_points,
-                                 gl_elements.sample_selection_address,
-                                 gl_elements.selection_quads_address);
-
 
 }
 
@@ -326,10 +413,12 @@ void myy_doubleclick(int x, int y, unsigned int button) {
   if ((z_t == zone_pile || z_t == zone_waste) &&
       quick_move(gl_elements.zones_du_jeu[h_z], &elements_du_jeu)) {
     regen_cards_coords(&gl_elements);
-    regen_and_store_selection_quad(&selection,
-                                   gl_elements.n_opaque_points,
-                                   gl_elements.sample_selection_address,
-                                   gl_elements.selection_quads_address);
+    regen_and_store_selection_quad(
+      &selection,
+      gl_elements.n_opaque_points,
+      gl_elements.sample_selection_address,
+      gl_elements.selection_quads_address
+    );
   }
   else myy_click(x, y, button);
 }
@@ -345,10 +434,11 @@ void load_game() {
                    (struct s_elements_du_jeu *) scratch+228)) {
       remove_selection(&selection);
       regen_cards_coords(&gl_elements);
-      regen_and_store_selection_quad(&selection,
-                                     gl_elements.n_opaque_points,
-                                     gl_elements.sample_selection_address,
-                                     gl_elements.selection_quads_address);
+      regen_and_store_selection_quad(
+        &selection, gl_elements.n_opaque_points,
+        gl_elements.sample_selection_address,
+        gl_elements.selection_quads_address
+      );
     }
     close(fd);
   }
@@ -373,11 +463,19 @@ void save_game() {
 
 void myy_move(int x, int y) {}
 
+
 #define KEY_S 39
 #define KEY_L 46
+#define KEY_KP_0 90
+#define KEY_KP_1 87
+#define KEY_KP_2 88
+#define KEY_KP_3 89
 void myy_key(unsigned int keycode) {
   if (keycode == KEY_S) save_game();
   if (keycode == KEY_L) load_game();
+  if (keycode == KEY_KP_0) hide_menus();
+  if (keycode == KEY_KP_1) { show_menu(pause_menu); }
+  if (keycode == KEY_KP_2) { show_menu(win_menu); }
 }
 void myy_stop() { myy_cleanup_drawing(); }
 void myy_animating() {}

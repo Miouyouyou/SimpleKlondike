@@ -67,6 +67,9 @@ enum e_elements_du_jeu {
   e_pile_4, e_pile_5, e_pile_6, e_pile_7, n_game_elements
 };
 
+void klondike_reset_game_elements
+(struct s_elements_du_jeu * const game_elements);
+
 unsigned int add_card_to_stack
 (struct s_zone* , struct s_zone*, struct s_selection* );
 unsigned int add_card_to_pile

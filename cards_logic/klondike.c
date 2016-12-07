@@ -2,6 +2,7 @@
 #include <cards_logic/klondike.h>
 
 #include <helpers/log.h>
+#include <opengl/menus.h>
 
 
 struct s_elements_du_jeu elements_du_jeu = {
@@ -133,7 +134,70 @@ carte base_deck[DECK_SIZE] = {
 
 carte deck[DECK_SIZE];
 
-void game_won() { LOG("Yippie !"); }
+static void reset_stacks_trick
+(struct s_elements_du_jeu * const game_elements) {
+
+  game_elements->tas[0].placees = 1;
+  game_elements->tas[0].cartes[0].valeur  = no_value;
+  game_elements->tas[0].cartes[0].famille = spade;
+
+  game_elements->tas[1].placees = 1;
+  game_elements->tas[1].cartes[0].valeur  = no_value;
+  game_elements->tas[1].cartes[0].famille = heart;
+
+  game_elements->tas[2].placees = 1;
+  game_elements->tas[2].cartes[0].valeur  = no_value;
+  game_elements->tas[2].cartes[0].famille = diamond;
+
+  game_elements->tas[3].placees = 1;
+  game_elements->tas[3].cartes[0].valeur  = no_value;
+  game_elements->tas[3].cartes[0].famille = club;
+}
+
+void klondike_reset_game_elements
+(struct s_elements_du_jeu * const game_elements) {
+  game_elements->pioche.placees = 0;
+  memset(game_elements->pioche.cartes, 0, REMAINING_DECK);
+  game_elements->piochees.placees = 0;
+  memset(game_elements->piochees.cartes, 0, REMAINING_DECK);
+  for (unsigned int s = 0; s < 4; s++) {
+    game_elements->tas[s].placees = 0;
+    memset(game_elements->tas[s].cartes, 0, MAX_CARDS_PER_STACK);
+  }
+  reset_stacks_trick(game_elements);
+
+  for (unsigned int p = 0; p < 7; p++) {
+    game_elements->suites[p].placees = 0;
+    memset(game_elements->suites[p].cartes, 0, MAX_CARDS_PER_PILE);
+  }
+}
+
+void generate_new_deck
+(carte *target_deck, const carte *not_shuffled_deck,
+ unsigned int not_shuffled_deck_size, unsigned int shuffle_passes) {
+  shuffled_deck_from_base_deck(target_deck, not_shuffled_deck,
+                               not_shuffled_deck_size, shuffle_passes);
+}
+
+void distribute_deck
+(carte *shuffled_deck, struct s_elements_du_jeu *game_elements) {
+
+  unsigned int distributed = distribute_n_cards_from_deck(
+    0, REMAINING_DECK, (struct s_zone *) &(game_elements->pioche),
+    shuffled_deck);
+
+  reset_stacks_trick(game_elements);
+
+  for (unsigned int p = 0; p < 7; p++) {
+    struct s_suites *pile = game_elements->suites+p;
+    distributed = distribute_n_cards_from_deck(
+      distributed, p+1, (struct s_zone *) pile, shuffled_deck
+    );
+    turn_cards_face_down(p, pile->cartes);
+  }
+}
+
+void game_won() { show_menu(win_menu); }
 
 void check_if_won() {
   int win_check = (elements_du_jeu.tas[0].placees == MAX_CARDS_PER_STACK &&
@@ -158,6 +222,7 @@ struct s_selection* start_selection_from
 }
 
 void remove_selection(struct s_selection* selection) { selection->done = 0; }
+
 unsigned int move_selected_cards_to
 (struct s_zone *new_zone, enum zones type, struct s_selection* selection) {
 
@@ -284,29 +349,6 @@ unsigned int add_card_to_pile
   LOG(" Moved card : %d\n", moved_cards);
 
   return moved_cards;
-}
-
-void generate_new_deck
-(carte *target_deck, const carte *not_shuffled_deck,
- unsigned int not_shuffled_deck_size, unsigned int shuffle_passes) {
-  shuffled_deck_from_base_deck(target_deck, not_shuffled_deck,
-                               not_shuffled_deck_size, shuffle_passes);
-}
-
-void distribute_deck
-(carte *shuffled_deck, struct s_elements_du_jeu *game_elements) {
-
-  unsigned int distributed = distribute_n_cards_from_deck(
-    0, REMAINING_DECK, (struct s_zone *) &(game_elements->pioche),
-    shuffled_deck);
-
-  for (unsigned int p = 0; p < 7; p++) {
-    struct s_suites *pile = game_elements->suites+p;
-    distributed = distribute_n_cards_from_deck(
-      distributed, p+1, (struct s_zone *) pile, shuffled_deck
-    );
-    turn_cards_face_down(p, pile->cartes);
-  }
 }
 
 unsigned int draw_cards
