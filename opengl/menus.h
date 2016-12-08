@@ -1,6 +1,5 @@
-#include <helpers/base_gl.h>
-#include <cards_logic/gl_cards.h>
-
+#ifndef MYY_KLONDIKE_OPENGL_MENUS_H
+#define MYY_KLONDIKE_OPENGL_MENUS_H 1
 
 /* All these definitions will soon be replaced by coordinates
  * generated with a script */
@@ -56,45 +55,54 @@
 #define MENUS_LAYER 0.10f
 
 #define MENU_PARTS 3
-
 struct dumb_window { two_layered_tris_quad parts[MENU_PARTS]; };
 enum dumb_window_parts {
   opaque_part,
   top_transp_part,
   bottom_transp_part
 };
-enum menus_names { pause_menu, win_menu, n_menus };
-enum pause_menu_hitboxes {
-  pause_button_restart,
-  pause_button_continue,
-  pause_menu_inside,
-  pause_menu_n_hitboxes
+enum menu_id { pause_menu, win_menu, n_menus };
+
+#define HITBOX_ACTION_SIGNATURE \
+  enum menu_id const menu, \
+  struct gl_elements * restrict const gl_elements
+
+#include <helpers/base_gl.h>
+#include <cards_logic/gl_cards.h>
+#include <opengl/global.h>
+
+struct menu_button {
+  struct hitbox hitbox;
+  void (*action)(HITBOX_ACTION_SIGNATURE);
 };
 
-enum win_menu_hitboxes {
-  win_button_github,
-  win_button_restart,
-  win_menu_n_hitboxes
-};
-
+#define MAX_BUTTONS 2
 struct menu_hitboxes {
-  struct hitbox pause[pause_menu_n_hitboxes];
-  struct hitbox win[win_menu_n_hitboxes];
+  struct hitbox inside;
+  void (*outside)(HITBOX_ACTION_SIGNATURE);
+  unsigned int n_buttons;
+  struct menu_button buttons[MAX_BUTTONS];
 };
 
-struct menu_actions {
-  void (*pause[pause_menu_n_hitboxes+1])();
-  void (*win[win_menu_n_hitboxes+1])();
-};
+void close_all_menus
+(struct gl_elements * restrict const gl_elements);
+void close_menu
+(enum menu_id const menu,
+ struct gl_elements * restrict const gl_elements);
+void open_menu
+(enum menu_id const menu,
+ struct gl_elements * restrict const gl_elements);
+
+void menu_hitbox_action_trigger
+(int8_t const x, int8_t const y,
+ struct gl_elements * restrict const gl_elements);
 
 void prepare_menus_buffers();
 void draw_menu
-(enum menus_names menu, struct gl_elements * const gl_elements );
-void handle_pause_clicks
-(int8_t const x, int8_t const y,
- const struct menu_hitboxes * restrict const hitboxes,
- const struct menu_actions * restrict const actions);
-void handle_win_clicks
-(int8_t const x, int8_t const y,
- const struct menu_hitboxes * restrict const hitboxes,
- const struct menu_actions * restrict const actions);
+(enum menu_id const menu,
+ struct gl_elements * const gl_elements,
+ enum draw_modes const draw_mode);
+void destroy_menu_buffers();
+
+
+#endif

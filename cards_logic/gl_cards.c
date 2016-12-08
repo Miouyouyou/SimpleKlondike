@@ -178,12 +178,17 @@ struct hitbox zones_hitboxes[13] = {
                128)}
 };
 
-extern struct s_elements_du_jeu elements_du_jeu;
-extern struct s_selection selection;
+extern struct s_elements_du_jeu elements_du_jeu; // klondike.c
+extern struct s_selection selection;             // klondike.c
+extern struct menu_hitboxes menus_hitactions[];  // opengl/menus.c
 
 struct gl_elements gl_elements = {
   .width = 1280,
   .height = 720,
+  .draw_menu = no_action,
+  .displaying_a_menu = 0,
+  .current_menu_id = 0,
+  .menus_hitboxes_address = menus_hitactions,
   .transparent_quads_address = gl_coords.GLcards_parts,
   .opaque_quads_address      = gl_coords.GLcards,
   .selection_quads_address   = &(gl_coords.GLselection),
@@ -214,6 +219,22 @@ struct gl_elements gl_elements = {
   }
 };
 
+void game_won() {
+  open_menu(win_menu, &gl_elements);
+}
+
+void basic_klondike_restart() {
+  myy_generate_new_state();
+  regen_cards_coords(&gl_elements);
+  regen_and_store_selection_quad(
+    &selection, gl_elements.n_opaque_points,
+    gl_elements.sample_selection_address,
+    gl_elements.selection_quads_address
+  );
+  close_all_menus(&gl_elements);
+}
+
+
 #define FACE_DOWN_INDEX 14
 #define CARD_TEX_S_STRIDE 4096 // << 12
 #define CARD_TEX_T_STRIDE 16384 // << 14 - 1
@@ -243,11 +264,17 @@ static unsigned int generate_card
  int z_layer, GLCard *models, unsigned int quads, GLCard *cpy) {
 
   int8_t card_value = card->valeur;
-  uint16_t current_card_s_offset =
-    card_value >= 0 ? card_value * CARD_TEX_S_STRIDE
-                    : CARD_BACK_TILE_NUMBER * CARD_TEX_S_STRIDE;
-  uint16_t current_card_t_offset =
-    (card->famille - 1) * CARD_TEX_T_STRIDE;
+  uint16_t current_card_s_offset;
+  uint16_t current_card_t_offset;
+
+  if (card_value >= 0) {
+    current_card_s_offset = card_value * CARD_TEX_S_STRIDE;
+    current_card_t_offset = (card->famille - 1) * CARD_TEX_T_STRIDE;
+  }
+  else {
+    current_card_s_offset = CARD_BACK_TILE_NUMBER * CARD_TEX_S_STRIDE;
+    current_card_t_offset = 0;
+  }
 
   return
      generate_card_quads(current_card_s_offset, current_card_t_offset,
@@ -425,22 +452,6 @@ void generate_horizontal_selection_around
   else memset(cpy, 0, sizeof(struct GLSelection));
 
 }
-
-/*void print_selection(struct GLSelection *selection) {
-  for (int p = 0; p < 3; p++) {
-    LOG("[print_selection] part : %d\n", p);
-    US_two_tris_quad_3D *part = (US_two_tris_quad_3D *) selection+p;
-    for (int i = 0; i < two_triangles_corners; i++) {
-      LOG("  [%d] s: %d, t: %d\n"
-          "  [%d] x: %d, y: %d, z: %d\n"
-          "  ----\n",
-          i, part->points[i].s, part->points[i].t,
-          i, part->points[i].x, part->points[i].y, part->points[i].z
-      );
-    }
-    LOG("---------------------------\n");
-  }
-}*/
 
 struct generated_parts generer_coordonnees_elements_du_jeu
 (struct s_zone **zones, GLCard *transparent_coords,

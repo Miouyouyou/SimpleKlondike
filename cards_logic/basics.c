@@ -24,7 +24,7 @@ void shuffled_deck_from_base_deck
 
   memcpy(deck, base_deck, sizeof(carte)*deck_size);
 
-  /* rand works "as intended" on Android, which mean it always provide
+  /* rand works "as intended" on Android, which mean it always provides
    * the same random values if you do not set the seed.
    * This is BRILLIANT !
    * Every time I ask for a random value, I want to receive the same

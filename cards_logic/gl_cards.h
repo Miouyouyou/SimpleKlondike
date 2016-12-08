@@ -2,6 +2,8 @@
 #define MYY_CARDS_POSITIONING 1
 
 #include <cards_logic/klondike.h>
+#include <opengl/menus.h>
+#include <opengl/global.h>
 
 #define TRANSPARENT_QUADS_PER_CARD 2
 #define OPAQUE_QUADS_PER_CARD 1
@@ -12,6 +14,12 @@ struct GLSelection { US_two_tris_quad_3D opaque, top, bottom; };
 
 struct gl_elements {
   uint16_t width, height;
+  void (*draw_menu)(enum menu_id const menu,
+                    struct gl_elements * const gl_elements,
+                    enum draw_modes const draw_mode);
+  enum menu_id current_menu_id;
+  unsigned int displaying_a_menu;
+  struct menu_hitboxes * menus_hitboxes_address;
   GLCard *transparent_quads_address, *opaque_quads_address;
   struct GLSelection *selection_quads_address;
   BUS_two_tris_3D_quad *background_address;
@@ -49,8 +57,9 @@ void regen_and_store_selection_quad
  struct GLSelection *model_selection,
  struct GLSelection *selection_quads);
 
-enum hitbox_elements {hitbox_upleft, hitbox_downright};
-struct hitbox { struct byte_point_2D range[2]; };
+void basic_klondike_restart
+(struct gl_elements * restrict const gl_elements);
+
 enum hitbox_zones {
   hitbox_pioche, hitbox_piochees,
   hitbox_stack_spade, hitbox_stack_heart, hitbox_stack_diamond, hitbox_stack_club,

@@ -6,7 +6,8 @@ pause_buttons = {
 
 win_buttons = {
   github:  {x: [120, 224], y: [200, 304]},
-  restart: {x: [284, 388], y: [200, 304]}
+  restart: {x: [284, 388], y: [200, 304]},
+  menu: {x: [0, 512], y: [0, 324]}
 }
 
 module WindowCoords

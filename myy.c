@@ -24,7 +24,7 @@
 
 #include <sys/types.h> // read, write, fstat, open
 #include <sys/stat.h> // fstat, open
-#include <unistd.h> // read, write, fstat, get_current_dir_name
+#include <unistd.h> // read, write, fstat
 #include <stdlib.h> // exit
 #include <fcntl.h> // open
 
@@ -36,16 +36,14 @@ extern carte base_deck[];
 extern carte deck[];
 extern uint8_t scratch[];
 
-/* To remove after testing */
-unsigned int show_menus = 0;
-enum menus_names menu_to_show = pause_menu;
-
-void hide_menus() { show_menus = 0; }
 void open_website(const char * const name) {
   LOG("Opening %s\n", name);
 }
 
-void myy_display_initialised(unsigned int width, unsigned int height) {
+void no_action() {}
+
+void myy_display_initialised
+(unsigned int width, unsigned int height) {
   gl_elements.width = width; gl_elements.height = height;
 }
 
@@ -93,7 +91,6 @@ inline void bind_current_card_buffer
     gl_elements->coords_buffers[gl_elements->current_buffer_id]
   );
 }
-
 extern void bind_current_card_buffer
 (struct gl_elements * const gl_elements);
 
@@ -148,16 +145,6 @@ void gen_current_cards_coordinates
   );
 }
 
-void basic_klondike_restart() {
-  myy_generate_new_state();
-  regen_cards_coords(&gl_elements);
-  regen_and_store_selection_quad(
-    &selection, gl_elements.n_opaque_points,
-    gl_elements.sample_selection_address,
-    gl_elements.selection_quads_address
-  );
-}
-
 void myy_init_drawing() {
 
   prepare_menus_buffers();
@@ -187,16 +174,14 @@ void myy_init_drawing() {
 
 void myy_init() {}
 
-void show_menu(enum menus_names menu) {
-  show_menus = 1;
-  menu_to_show = menu;
-  LOG("Showing menu : %d\n", menu);
-}
-
 void myy_draw() {
   glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
 
   //glClearColor(0.2f,0.6f,0.3f,1.0f);
+
+  gl_elements.draw_menu(
+    gl_elements.current_menu_id, &gl_elements, draw_opaque
+  );
 
   const unsigned int
     BUS_x_offset = offsetof(struct BUS_textured_point_3D, x),
@@ -212,7 +197,6 @@ void myy_draw() {
 
   uint8_t *current_offset = 0;
 
-  if (show_menus) draw_menu(menu_to_show, &gl_elements);
   /*
    * This could be reduced to 6 Vertex + Draw calls and 3 Blending calls.
    * The only reason for all these calls is because Cards coordinates are in
@@ -247,9 +231,6 @@ void myy_draw() {
 
   bind_current_card_buffer(&gl_elements);
   glUniform1i(gl_elements.uniforms[unif_background], 0);
-
-  /* Disable Blending */
-  glDisable(GL_BLEND);
 
   /* Cards : Opaque parts */
   glVertexAttribPointer(attr_st, 2, GL_UNSIGNED_SHORT, GL_TRUE,
@@ -298,6 +279,11 @@ void myy_draw() {
                         byte_quad_size, current_offset + BUS_x_offset);
   glDrawArrays(GL_TRIANGLES, 0, card_transparent_points);
 
+  gl_elements.draw_menu(
+    gl_elements.current_menu_id, &gl_elements, draw_blended
+  );
+
+  glDisable(GL_BLEND);
 }
 
 
@@ -325,7 +311,7 @@ void myy_click
   struct byte_point_2D norm_coords =
     normalise(x, y, gl_elements.width, gl_elements.height);
 
-  if (show_menus == 0) {
+  if (!gl_elements.displaying_a_menu) {
     enum hitbox_zones h_z =
       determine_clicked_zone(norm_coords.x, norm_coords.y);
 
@@ -381,19 +367,9 @@ void myy_click
                                    gl_elements.selection_quads_address);
   }
   else {
-    switch (menu_to_show) {
-    case pause_menu:
-      handle_pause_clicks(norm_coords.x, norm_coords.y,
-                          &menus_hitboxes,
-                          &menus_actions);
-      break;
-    case win_menu:
-      handle_win_clicks(norm_coords.x, norm_coords.y,
-                        &menus_hitboxes,
-                        &menus_actions);
-      break;
-    }
-
+    menu_hitbox_action_trigger(
+      norm_coords.x, norm_coords.y, &gl_elements
+    );
   }
 
 }
@@ -407,10 +383,12 @@ void myy_doubleclick(int x, int y, unsigned int button) {
     determine_clicked_zone(norm_coords.x, norm_coords.y);
 
   enum zones z_t = determine_zone_type(h_z);
+  unsigned int displaying_a_menu = gl_elements.displaying_a_menu;
   LOG("norm_coords.x : %d - norm_coords.y : %d -> z_t : %d\n",
       norm_coords.x, norm_coords.y, z_t);
 
-  if ((z_t == zone_pile || z_t == zone_waste) &&
+  if (!displaying_a_menu &&
+      (z_t == zone_pile || z_t == zone_waste) &&
       quick_move(gl_elements.zones_du_jeu[h_z], &elements_du_jeu)) {
     regen_cards_coords(&gl_elements);
     regen_and_store_selection_quad(
@@ -473,9 +451,8 @@ void myy_move(int x, int y) {}
 void myy_key(unsigned int keycode) {
   if (keycode == KEY_S) save_game();
   if (keycode == KEY_L) load_game();
-  if (keycode == KEY_KP_0) hide_menus();
-  if (keycode == KEY_KP_1) { show_menu(pause_menu); }
-  if (keycode == KEY_KP_2) { show_menu(win_menu); }
+  if (keycode == KEY_KP_0) close_all_menus(&gl_elements);
+  if (keycode == KEY_KP_1) open_menu(pause_menu, &gl_elements);
 }
 void myy_stop() { myy_cleanup_drawing(); }
 void myy_animating() {}

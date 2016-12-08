@@ -11,123 +11,202 @@ GLuint windows_buffer = 0;
 
 #define GITHUB_URL "https://github.com/Miouyouyou/SimpleKlondike"
 
-void no_action() {}
-void pause_menu_restart() {
-  LOG("[pause_menu_restart]\n");
-  basic_klondike_restart();
-}
-void pause_menu_continue() {
-  LOG("[pause_menu_continue]\n");
-  hide_menus();
+void close_all_menus
+(struct gl_elements * restrict const gl_elements) {
+  gl_elements->draw_menu = no_action;
+  gl_elements->displaying_a_menu = 0;
 }
 
-void win_menu_github() {
+void close_menu
+(enum menu_id const menu,
+ struct gl_elements * restrict const gl_elements) {
+  close_all_menus(gl_elements);
+}
+
+void open_menu
+(enum menu_id const menu,
+ struct gl_elements * restrict const gl_elements) {
+  gl_elements->current_menu_id = menu;
+  gl_elements->draw_menu = draw_menu;
+  gl_elements->displaying_a_menu = 1;
+}
+
+void pause_menu_restart
+(enum menu_id const menu,
+ struct gl_elements * restrict const gl_elements) {
+  LOG("[pause_menu_restart]\n");
+  basic_klondike_restart(gl_elements);
+  close_menu(menu, gl_elements);
+}
+void pause_menu_continue
+(enum menu_id const menu,
+ struct gl_elements * restrict const gl_elements) {
+  LOG("[pause_menu_continue]\n");
+  close_menu(menu, gl_elements);
+}
+
+void win_menu_github
+(enum menu_id const menu,
+ struct gl_elements * restrict const gl_elements) {
   LOG("[win_menu_github]\n");
   open_website(GITHUB_URL);
 }
-void win_menu_restart() {
+void win_menu_restart
+(enum menu_id const menu,
+ struct gl_elements * restrict const gl_elements) {
   LOG("[win_menu_restart]\n");
-  basic_klondike_restart();
+  basic_klondike_restart(gl_elements);
+  close_menu(menu, gl_elements);
 }
 
-struct menu_hitboxes menus_hitboxes = {
-  .pause = {
-    {.range = {{.x = -56, .y = 25}, {.x = -28, .y = -24}}}, // restart
-    {.range = {{.x =  28, .y = 25}, {.x =  56, .y = -24}}}, // continue
-    {.range = {{.x = -68, .y = 60}, {.x =  68, .y = -60}}}, // menu
+struct menu_hitboxes menus_hitactions[] = {
+  [pause_menu] = {
+    .inside  = {.range = {{.x = -68, .y = 60}, {.x =  68, .y = -60}}},
+    .outside = close_menu,
+    .n_buttons = 2,
+    .buttons = {
+      {
+        .hitbox = {.range = {{.x = -56, .y =  25},
+                             {.x = -28, .y = -24}}},
+        .action = pause_menu_restart
+      },
+      {
+        .hitbox = {.range = {{.x =  28, .y =  25},
+                             {.x =  56, .y = -24}}},
+        .action = pause_menu_continue
+      },
+    }
   },
-  .win = {
-    {.range = {{.x = -36, .y = -18}, {.x = -8, .y = -67}}}, // github
-    {.range = {{.x = 7, .y = -18}, {.x = 35, .y = -67}}} // restart
+  [win_menu] = {
+    .inside = {.range = {{.x = -68, .y = 76}, {.x = 68, .y = -76}}},
+    .outside = no_action,
+    .n_buttons = 2,
+    .buttons = {
+      {
+        .hitbox = {.range = {{.x = -36, .y = -18},
+                             {.x = -8,  .y = -67}}},
+        .action = win_menu_github
+      },
+      {
+        .hitbox = {.range = {{.x = 7,  .y = -18},
+                             {.x = 35, .y = -67}}},
+        .action = win_menu_restart
+      }
+    }
   }
 };
 
-struct menu_actions menus_actions = {
-  .pause = {
-    pause_menu_restart,
-    pause_menu_continue,
-    no_action,
-    hide_menus
-  },
-  .win = {
-    win_menu_github,
-    win_menu_restart,
-    no_action,
-  }
-};
 
-void handle_pause_clicks
-(int8_t const x, int8_t const y,
- const struct menu_hitboxes * restrict const hitboxes,
- const struct menu_actions * restrict const actions) {
-  unsigned int hitbox_id =
-    determine_hitbox_id_glbyte(x, y, hitboxes->pause,
-                               pause_menu_n_hitboxes);
-  LOG("[handle_pause_clicks]\n");
-  LOG("  Hitbox id : %d\n", hitbox_id);
-  actions->pause[hitbox_id]();
+inline unsigned int outside_hitbox_range
+(int8_t x, int8_t y,
+ struct hitbox * restrict const current_hitbox) {
+
+  return x < current_hitbox->range[0].x ||
+         y > current_hitbox->range[0].y ||
+         x > current_hitbox->range[1].x ||
+         y < current_hitbox->range[1].y;
 }
 
-void handle_win_clicks
+extern unsigned int outside_hitbox_range
+(int8_t x, int8_t y, struct hitbox * restrict const hitbox);
+
+/* Generalised */
+void hitbox_action_trigger
 (int8_t const x, int8_t const y,
- const struct menu_hitboxes * restrict const hitboxes,
- const struct menu_actions * restrict const actions) {
-  unsigned int hitbox_id =
-    determine_hitbox_id_glbyte(x, y, hitboxes->win,
-                               win_menu_n_hitboxes);
-  LOG("[handle_win_clicks]\n");
-  LOG("  Hitbox id : %d\n", hitbox_id);
-  actions->win[hitbox_id]();
+ enum menu_id const menu_id,
+ struct menu_hitboxes * menu_zones,
+ struct gl_elements * restrict const gl_elements) {
+
+  LOG("[hitbox_action_trigger] \n");
+  if (!outside_hitbox_range(x, y, &menu_zones->inside)) {
+    LOG("  Inside !\n");
+    unsigned int const n_buttons = menu_zones->n_buttons;
+
+    for (unsigned int b = 0; b < n_buttons; b++) {
+      struct menu_button * const current_button =
+         menu_zones->buttons+b;
+
+      if (outside_hitbox_range(x, y, &current_button->hitbox))
+        continue;
+      else {
+        current_button->action(menu_id, gl_elements);
+        break;
+      }
+    }
+
+  }
+  else {
+    LOG("  Outside...\n");
+    menu_zones->outside(menu_id, gl_elements);
+  }
+
+}
+
+/* Specialised */
+void menu_hitbox_action_trigger
+(int8_t const x, int8_t const y,
+ struct gl_elements * restrict const gl_elements) {
+  enum menu_id const current_menu_id = gl_elements->current_menu_id;
+  hitbox_action_trigger(
+    x, y, current_menu_id,
+    gl_elements->menus_hitboxes_address+current_menu_id,
+    gl_elements
+  );
 }
 
 void prepare_menus_buffers() {
 
   struct dumb_window windows[n_menus] = { 
-  { .parts = {
-      STXYZ_QUAD(-MENUS_PAUSE_REL_WIDTH, MENUS_PAUSE_REL_WIDTH,
-                 -MENUS_PAUSE_REL_OPAQUE_HEIGHT,
-                 MENUS_PAUSE_REL_OPAQUE_HEIGHT,
-                 MENUS_LAYER,
-                 MENUS_TEX_PAUSE_LEFT, MENUS_TEX_PAUSE_RIGHT,
-                 MENUS_TEX_PAUSE_ALPHA_BOTTOM_TOP,
-                 MENUS_TEX_PAUSE_ALPHA_TOP_BOTTOM),
+    [pause_menu] = {
+      .parts = {
+        STXYZ_QUAD(-MENUS_PAUSE_REL_WIDTH, MENUS_PAUSE_REL_WIDTH,
+                   -MENUS_PAUSE_REL_OPAQUE_HEIGHT,
+                   MENUS_PAUSE_REL_OPAQUE_HEIGHT,
+                   MENUS_LAYER,
+                   MENUS_TEX_PAUSE_LEFT, MENUS_TEX_PAUSE_RIGHT,
+                   MENUS_TEX_PAUSE_ALPHA_BOTTOM_TOP,
+                   MENUS_TEX_PAUSE_ALPHA_TOP_BOTTOM),
 
-      STXYZ_QUAD(-MENUS_PAUSE_REL_WIDTH, MENUS_PAUSE_REL_WIDTH,
-                 MENUS_PAUSE_REL_HEIGHT, MENUS_PAUSE_REL_OPAQUE_HEIGHT,
-                 MENUS_LAYER,
-                 MENUS_TEX_PAUSE_LEFT, MENUS_TEX_PAUSE_RIGHT,
-                 MENUS_TEX_PAUSE_TOP, MENUS_TEX_PAUSE_ALPHA_TOP_BOTTOM),
+        STXYZ_QUAD(-MENUS_PAUSE_REL_WIDTH, MENUS_PAUSE_REL_WIDTH,
+                   MENUS_PAUSE_REL_HEIGHT,
+                   MENUS_PAUSE_REL_OPAQUE_HEIGHT,
+                   MENUS_LAYER,
+                   MENUS_TEX_PAUSE_LEFT, MENUS_TEX_PAUSE_RIGHT,
+                   MENUS_TEX_PAUSE_TOP,
+                   MENUS_TEX_PAUSE_ALPHA_TOP_BOTTOM),
 
-      STXYZ_QUAD(-MENUS_PAUSE_REL_WIDTH, MENUS_PAUSE_REL_WIDTH,
-                 -MENUS_PAUSE_REL_HEIGHT, -MENUS_PAUSE_REL_OPAQUE_HEIGHT,
-                 MENUS_LAYER,
-                 MENUS_TEX_PAUSE_LEFT, MENUS_TEX_PAUSE_RIGHT,
-                 MENUS_TEX_PAUSE_BOTTOM,
-                 MENUS_TEX_PAUSE_ALPHA_BOTTOM_TOP)
-    }
-  },
-  { .parts = {
-      STXYZ_QUAD(-MENUS_WIN_REL_WIDTH, MENUS_WIN_REL_WIDTH,
-                 -MENUS_WIN_REL_OPAQUE_HEIGHT,
-                 MENUS_WIN_REL_OPAQUE_HEIGHT,
-                 MENUS_LAYER,
-                 MENUS_TEX_WIN_LEFT, MENUS_TEX_WIN_RIGHT,
-                 MENUS_TEX_WIN_ALPHA_BOTTOM_TOP,
-                 MENUS_TEX_WIN_ALPHA_TOP_BOTTOM),
+        STXYZ_QUAD(-MENUS_PAUSE_REL_WIDTH, MENUS_PAUSE_REL_WIDTH,
+                   -MENUS_PAUSE_REL_HEIGHT,
+                   -MENUS_PAUSE_REL_OPAQUE_HEIGHT,
+                   MENUS_LAYER,
+                   MENUS_TEX_PAUSE_LEFT, MENUS_TEX_PAUSE_RIGHT,
+                   MENUS_TEX_PAUSE_BOTTOM,
+                   MENUS_TEX_PAUSE_ALPHA_BOTTOM_TOP)
+      }
+    },
+    [win_menu] = {
+      .parts = {
+        STXYZ_QUAD(-MENUS_WIN_REL_WIDTH, MENUS_WIN_REL_WIDTH,
+                   -MENUS_WIN_REL_OPAQUE_HEIGHT,
+                   MENUS_WIN_REL_OPAQUE_HEIGHT,
+                   MENUS_LAYER,
+                   MENUS_TEX_WIN_LEFT, MENUS_TEX_WIN_RIGHT,
+                   MENUS_TEX_WIN_ALPHA_BOTTOM_TOP,
+                   MENUS_TEX_WIN_ALPHA_TOP_BOTTOM),
 
-      STXYZ_QUAD(-MENUS_WIN_REL_WIDTH, MENUS_WIN_REL_WIDTH,
-                 MENUS_WIN_REL_HEIGHT,MENUS_WIN_REL_OPAQUE_HEIGHT,
-                 MENUS_LAYER,
-                 MENUS_TEX_WIN_LEFT, MENUS_TEX_WIN_RIGHT,
-                 MENUS_TEX_WIN_ALPHA_TOP_BOTTOM,MENUS_TEX_WIN_TOP),
+        STXYZ_QUAD(-MENUS_WIN_REL_WIDTH, MENUS_WIN_REL_WIDTH,
+                   MENUS_WIN_REL_HEIGHT,MENUS_WIN_REL_OPAQUE_HEIGHT,
+                   MENUS_LAYER,
+                   MENUS_TEX_WIN_LEFT, MENUS_TEX_WIN_RIGHT,
+                   MENUS_TEX_WIN_ALPHA_TOP_BOTTOM,MENUS_TEX_WIN_TOP),
 
-      STXYZ_QUAD(-MENUS_WIN_REL_WIDTH, MENUS_WIN_REL_WIDTH,
-                 -MENUS_WIN_REL_HEIGHT,-MENUS_WIN_REL_OPAQUE_HEIGHT,
-                 MENUS_LAYER,
-                 MENUS_TEX_WIN_LEFT, MENUS_TEX_WIN_RIGHT,
-                 MENUS_TEX_WIN_BOTTOM,MENUS_TEX_WIN_ALPHA_BOTTOM_TOP)
-     }
-  },
+        STXYZ_QUAD(-MENUS_WIN_REL_WIDTH, MENUS_WIN_REL_WIDTH,
+                   -MENUS_WIN_REL_HEIGHT,-MENUS_WIN_REL_OPAQUE_HEIGHT,
+                   MENUS_LAYER,
+                   MENUS_TEX_WIN_LEFT, MENUS_TEX_WIN_RIGHT,
+                   MENUS_TEX_WIN_BOTTOM,MENUS_TEX_WIN_ALPHA_BOTTOM_TOP)
+      }
+    },
   };
 
   if (!windows_buffer) glGenBuffers(1, &windows_buffer);
@@ -138,37 +217,38 @@ void prepare_menus_buffers() {
 }
 
 void draw_menu
-(enum menus_names const menu,
- struct gl_elements * const gl_elements ) {
+(enum menu_id const menu,
+ struct gl_elements * const gl_elements,
+ enum draw_modes const draw_mode) {
 
   const unsigned int buffer_offset = sizeof(struct dumb_window)*menu;
 
   glBindBuffer(GL_ARRAY_BUFFER, windows_buffer);
-
   glUniform1i(gl_elements->uniforms[unif_background], 2);
-  glDisable(GL_BLEND);
-  glVertexAttribPointer(attr_xyz, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(struct textured_point_3D),
-                        (const void *) buffer_offset);
-  glVertexAttribPointer(attr_st, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(struct textured_point_3D),
-                        (const void *)
-                        (buffer_offset+offsetof(struct textured_point_3D, s)));
-  glDrawArrays(GL_TRIANGLES, 0, two_triangles_corners);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  glVertexAttribPointer(attr_xyz, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(struct textured_point_3D),
-                        (const void *) buffer_offset);
-  glVertexAttribPointer(attr_st, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(struct textured_point_3D),
-                        (const void *)
-                        buffer_offset+offsetof(struct textured_point_3D, s));
-  glDrawArrays(GL_TRIANGLES, two_triangles_corners,
-               two_triangles_corners*2);
-
-  glDisable(GL_BLEND);
+  switch(draw_mode) {
+  case draw_opaque:
+    glVertexAttribPointer(attr_xyz, 3, GL_FLOAT, GL_FALSE,
+                          sizeof(struct textured_point_3D),
+                          (const void *) buffer_offset);
+    glVertexAttribPointer(attr_st, 2, GL_FLOAT, GL_FALSE,
+                          sizeof(struct textured_point_3D),
+                          (const void *)
+                          (buffer_offset+offsetof(struct textured_point_3D, s)));
+    glDrawArrays(GL_TRIANGLES, 0, two_triangles_corners);
+    break;
+  case draw_blended:
+    glVertexAttribPointer(attr_xyz, 3, GL_FLOAT, GL_FALSE,
+                          sizeof(struct textured_point_3D),
+                          (const void *) buffer_offset);
+    glVertexAttribPointer(attr_st, 2, GL_FLOAT, GL_FALSE,
+                          sizeof(struct textured_point_3D),
+                          (const void *)
+                          buffer_offset+offsetof(struct textured_point_3D, s));
+    glDrawArrays(GL_TRIANGLES, two_triangles_corners,
+                 two_triangles_corners*2);
+    break;
+  }
 }
 
-void destroy_menu_buffer() { glDeleteBuffers(1, &windows_buffer); }
+void destroy_menu_buffers() { glDeleteBuffers(1, &windows_buffer); }

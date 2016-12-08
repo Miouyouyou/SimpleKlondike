@@ -197,8 +197,6 @@ void distribute_deck
   }
 }
 
-void game_won() { show_menu(win_menu); }
-
 void check_if_won() {
   int win_check = (elements_du_jeu.tas[0].placees == MAX_CARDS_PER_STACK &&
                    elements_du_jeu.tas[1].placees == MAX_CARDS_PER_STACK &&
