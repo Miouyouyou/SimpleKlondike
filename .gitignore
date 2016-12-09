@@ -20,3 +20,4 @@ Generator/*/*.png
 Generator/*/*.svg
 Generator/*/*.bmp
 Generator/*/*.raw
+Generator/android_icons/drawable*
