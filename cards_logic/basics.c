@@ -11,18 +11,18 @@ struct s_selection selection = {
   .move_only_top_card = 0
 };
 
-void print_deck(carte *deck_to_print, unsigned int n) {
+void print_deck(card *deck_to_print, unsigned int n) {
   for (unsigned int i = 0; i < n; i++) {
     LOG("[Card %d] Family : %d, Value : %d\n", i,
-        deck_to_print[i].famille, deck_to_print[i].valeur);
+        deck_to_print[i].suit, deck_to_print[i].value);
   }
 }
 
 void shuffled_deck_from_base_deck
-(carte *deck, const carte *base_deck,
+(card *deck, const card *base_deck,
  unsigned int deck_size, unsigned int passes) {
 
-  memcpy(deck, base_deck, sizeof(carte)*deck_size);
+  memcpy(deck, base_deck, sizeof(card)*deck_size);
 
   /* rand works "as intended" on Android, which mean it always provides
    * the same random values if you do not set the seed.
@@ -39,7 +39,7 @@ void shuffled_deck_from_base_deck
   while(passes--) {
     for (int n = 0; n < deck_size; n++) {
       unsigned int random_i = (unsigned int) (rand() % deck_size);
-      carte swapped = deck[random_i];
+      card swapped = deck[random_i];
       deck[random_i] = deck[n];
       deck[n] = swapped;
     }
@@ -47,19 +47,19 @@ void shuffled_deck_from_base_deck
 }
 
 unsigned int distribute_n_cards_from_deck
-(unsigned int cursor, unsigned int n, struct s_zone *zone, carte *src) {
+(unsigned int cursor, unsigned int n, struct s_zone *zone, card *src) {
   /*LOG("start from : %d, n : %d\n", cursor, n);*/
-  carte *dst = zone->cartes;
+  card *dst = zone->cards;
   for (unsigned int i = 0; i < n; i++, cursor++) dst[i] = src[cursor];
-  zone->placees += n;
+  zone->placed += n;
   /*LOG("Distributed %d cards\n", n);
-  LOG("Cards in zone : %d\n", zone->placees);
+  LOG("Cards in zone : %d\n", zone->placed);
   LOG("Destination deck :\n");*/
   print_deck(dst, n);
   return cursor;
 }
 
-void turn_cards_face_down(unsigned int n, carte *pile) {
+void turn_cards_face_down(unsigned int n, card *pile) {
   for (unsigned int card_i = 0; card_i < n; card_i++)
     if(IS_FACE_UP(pile[card_i])) TURN_CARD(pile[card_i]);
 }

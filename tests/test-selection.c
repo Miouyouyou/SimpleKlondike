@@ -12,30 +12,30 @@
 void test_selection() {
   struct s_selection *my_selection = utl_create_selection();
 
-  carte standard_cards[] = {
+  card standard_cards[] = {
     __CARTE(two, heart), __CARTE(three, spade), __CARTE(four, diamond)
   };
-  carte standard_stack_cards[] = {
+  card standard_stack_cards[] = {
     __CARTE(no_value, club), // Card trick...
     __CARTE(ace, club),
     __CARTE(two, club),
     __CARTE(three, club)
   };
 
-  struct s_piochees *test_piochees = utl_create_waste(standard_cards, 3);
-  struct s_suites *test_pile = utl_create_pile(standard_cards, 3);
-  struct s_tas *test_tas = utl_create_stack(standard_stack_cards, 4);
+  struct s_waste *test_waste = utl_create_waste(standard_cards, 3);
+  struct s_piles *test_pile = utl_create_pile(standard_cards, 3);
+  struct s_stack *test_stack = utl_create_stack(standard_stack_cards, 4);
 
   TEST_DESCRIPTION("Testing selecting cards from the waste");
-  start_selection_from((struct s_zone *) test_piochees, zone_waste, my_selection);
-  assert(my_selection->zone == (struct s_zone *) test_piochees);
+  start_selection_from((struct s_zone *) test_waste, zone_waste, my_selection);
+  assert(my_selection->zone == (struct s_zone *) test_waste);
   assert(my_selection->done == 1);
   assert(my_selection->move_only_top_card == 1);
   utl_reset_selection(my_selection);
 
   TEST_DESCRIPTION("Testing selecting cards from the stack");
-  start_selection_from((struct s_zone *) test_tas, zone_stack, my_selection);
-  assert(my_selection->zone == (struct s_zone *) test_tas);
+  start_selection_from((struct s_zone *) test_stack, zone_stack, my_selection);
+  assert(my_selection->zone == (struct s_zone *) test_stack);
   assert(my_selection->done == 1);
   assert(my_selection->move_only_top_card == 1);
   utl_reset_selection(my_selection);
@@ -48,9 +48,9 @@ void test_selection() {
   utl_reset_selection(my_selection);
 
   free(my_selection);
-  free(test_piochees);
+  free(test_waste);
   free(test_pile);
-  free(test_tas);
+  free(test_stack);
 
   LOG("OK !\n");
 }
@@ -58,21 +58,21 @@ void test_selection() {
 void test_remove_selection() {
   struct s_selection *my_selection = utl_create_selection();
 
-  carte standard_cards[] = {
+  card standard_cards[] = {
     __CARTE(two, heart), __CARTE(three, spade), __CARTE(four, diamond)
   };
-  carte standard_stack_cards[] = {
+  card standard_stack_cards[] = {
     __CARTE(no_value, club), // Card trick...
     __CARTE(ace, club),
     __CARTE(two, club),
     __CARTE(three, club)
   };
-  struct s_piochees *test_piochees = utl_create_waste(standard_cards, 3);
-  struct s_suites *test_pile = utl_create_pile(standard_cards, 3);
-  struct s_tas *test_tas = utl_create_stack(standard_stack_cards, 4);
+  struct s_waste *test_waste = utl_create_waste(standard_cards, 3);
+  struct s_piles *test_pile = utl_create_pile(standard_cards, 3);
+  struct s_stack *test_stack = utl_create_stack(standard_stack_cards, 4);
 
-  utl_select_and_deselect((struct s_zone *) test_piochees, zone_waste, my_selection);
-  utl_select_and_deselect((struct s_zone *) test_tas, zone_stack, my_selection);
+  utl_select_and_deselect((struct s_zone *) test_waste, zone_waste, my_selection);
+  utl_select_and_deselect((struct s_zone *) test_stack, zone_stack, my_selection);
   utl_select_and_deselect((struct s_zone *) test_pile, zone_pile, my_selection);
 
   // Already deselected
@@ -80,9 +80,9 @@ void test_remove_selection() {
   assert(my_selection->done == 0);
 
   free(my_selection);
-  free(test_piochees);
+  free(test_waste);
   free(test_pile);
-  free(test_tas);
+  free(test_stack);
 
   LOG("OK !\n");
 }
@@ -92,19 +92,19 @@ void test_move_pile_to_pile() {
   TEST_DESCRIPTION("Moving a king between empty piles");
   struct s_selection *new_selection = utl_create_selection();
 
-  carte first_set[] = { __CARTE(king, spade) };
+  card first_set[] = { __CARTE(king, spade) };
   //LOG("King : %d - Spade : %d\n", king, spade);
-  struct s_suites *first_pile = utl_create_pile(first_set, 1);
-  struct s_suites *second_pile = utl_create_pile(0, 0);
+  struct s_piles *first_pile = utl_create_pile(first_set, 1);
+  struct s_piles *second_pile = utl_create_pile(0, 0);
 
   assert(1 == utl_move_from_pile_to_pile(first_pile, second_pile, new_selection));
 
-  assert(first_pile->placees == 0);
+  assert(first_pile->placed == 0);
   assert_pile_cards(second_pile, first_set, 1);
 
   assert(1 == utl_move_from_pile_to_pile(second_pile, first_pile, new_selection));
 
-  assert(second_pile->placees == 0);
+  assert(second_pile->placed == 0);
   assert_pile_cards(first_pile, first_set, 1);
 
   free(first_pile);
@@ -112,7 +112,7 @@ void test_move_pile_to_pile() {
 
   /*-----*/
   TEST_DESCRIPTION("Moving a King pile to another empty pile");
-  carte second_set[] = {
+  card second_set[] = {
     __CARTE(king, spade), __CARTE(queen, diamond), __CARTE(jack, club),
     __CARTE(ten, heart)
   };
@@ -122,12 +122,12 @@ void test_move_pile_to_pile() {
 
   assert(4 == utl_move_from_pile_to_pile(first_pile, second_pile, new_selection));
 
-  assert(first_pile->placees == 0);
+  assert(first_pile->placed == 0);
   assert_pile_cards(second_pile, second_set, 4);
 
   assert(4 == utl_move_from_pile_to_pile(second_pile, first_pile, new_selection));
 
-  assert(second_pile->placees == 0);
+  assert(second_pile->placed == 0);
   assert_pile_cards(first_pile, second_set, 4);
 
   free(first_pile);
@@ -136,7 +136,7 @@ void test_move_pile_to_pile() {
   /*------*/
   TEST_DESCRIPTION("Moving a King suite below turned cards to an empty pile");
   TEST_ADDED_INFOS("The moved pile cannot return below the turned cards");
-  carte third_set[] = {
+  card third_set[] = {
     __TURNED_CARD(ace, heart), __TURNED_CARD(six, heart),
     __CARTE(king, club), __CARTE(queen, heart), __CARTE(jack, club)
   };
@@ -160,9 +160,9 @@ void test_move_pile_to_pile() {
 
   TEST_DESCRIPTION("Cannot move a card below another valid but turned card");
   TEST_ADDED_INFOS("Once the turned card is face up, the move is allowed");
-  carte fourth_set_first_pile[]  = { __TURNED_CARD(five, heart) };
-  carte fourth_set_second_pile[] = { __CARTE(four, spade) };
-  carte fourth_set_after_turn_result[] = {
+  card fourth_set_first_pile[]  = { __TURNED_CARD(five, heart) };
+  card fourth_set_second_pile[] = { __CARTE(four, spade) };
+  card fourth_set_after_turn_result[] = {
     __CARTE(five, heart),
     __CARTE(four, spade)
   };
@@ -183,18 +183,18 @@ void test_move_pile_to_pile() {
   assert_pile_cards(first_pile, fourth_set_first_pile, 1);
   assert_pile_cards(second_pile, fourth_set_second_pile, 1);
 
-  TURN_CARD(first_pile->cartes[0]);
+  TURN_CARD(first_pile->cards[0]);
   assert(1 == utl_move_from_pile_to_pile(second_pile, first_pile, new_selection));
 
   assert_pile_cards(first_pile, fourth_set_after_turn_result, 2);
-  assert(second_pile->placees == 0);
+  assert(second_pile->placed == 0);
 
   free(first_pile);
   free(second_pile);
 
   TEST_DESCRIPTION("Testing one card move between almost full piles");
   TEST_ADDED_INFOS("The pile receiving the card becomes full");
-  carte sixth_set_first_pile[] = {
+  card sixth_set_first_pile[] = {
     __TURNED_CARD(jack, heart),
     __TURNED_CARD(seven, heart),
     __TURNED_CARD(eight, club),
@@ -216,7 +216,7 @@ void test_move_pile_to_pile() {
     __CARTE(ace, spade)
   };
 
-  carte sixth_set_second_pile[] = {
+  card sixth_set_second_pile[] = {
     __TURNED_CARD(two, spade),
     __TURNED_CARD(five, spade),
     __TURNED_CARD(nine, club),
@@ -235,7 +235,7 @@ void test_move_pile_to_pile() {
     __CARTE(three, club),
     __CARTE(two, diamond)
   };
-  carte sixth_set_second_pile_after_move[] = {
+  card sixth_set_second_pile_after_move[] = {
     __TURNED_CARD(two, spade),
     __TURNED_CARD(five, spade),
     __TURNED_CARD(nine, club),
@@ -279,16 +279,16 @@ void test_move_pile_to_pile() {
 void test_move_waste_to_pile() {
   struct s_selection *selection = utl_create_selection();
 
-  carte first_waste[] = {
+  card first_waste[] = {
     __CARTE(ace, diamond), __CARTE(four, spade), __CARTE(king, diamond)
   };
-  carte first_pile_after_move[] = {
+  card first_pile_after_move[] = {
     __CARTE(king, diamond)
   };
 
   TEST_DESCRIPTION("Valid moves from the waste to empty piles are OK");
-  struct s_suites *pile = utl_create_pile(0,0);
-  struct s_piochees *waste = utl_create_waste(first_waste, 3);
+  struct s_piles *pile = utl_create_pile(0,0);
+  struct s_waste *waste = utl_create_waste(first_waste, 3);
 
   assert(1 == utl_move_from_waste_to_pile(waste, pile, selection));
 
@@ -308,13 +308,13 @@ void test_move_waste_to_pile() {
   free(pile);
 
   TEST_DESCRIPTION("Waste -> Pile : Move only one card a at a time");
-  carte second_waste[] = {
+  card second_waste[] = {
     __CARTE(six, club), __CARTE(seven, heart), __CARTE(eight, spade)
   };
-  carte second_pile[] = {
+  card second_pile[] = {
     __CARTE(nine, heart)
   };
-  carte second_pile_after_all_moves[] = {
+  card second_pile_after_all_moves[] = {
     __CARTE(nine, heart),
     __CARTE(eight, spade),
     __CARTE(seven, heart),
@@ -336,11 +336,11 @@ void test_move_waste_to_pile() {
   free(pile);
 
   TEST_DESCRIPTION("Waste -> Pile : Invalid moves are not allowed");
-  carte third_waste[] = { __CARTE(seven, heart) };
+  card third_waste[] = { __CARTE(seven, heart) };
 
-  carte third_bad_pile_turned[] = { __TURNED_CARD(eight, club) };
-  carte third_bad_pile[] = { __CARTE(eight, heart) };
-  carte third_bad_full_pile[] = {
+  card third_bad_pile_turned[] = { __TURNED_CARD(eight, club) };
+  card third_bad_pile[] = { __CARTE(eight, heart) };
+  card third_bad_full_pile[] = {
     __TURNED_CARD(jack, diamond),
     __TURNED_CARD(seven, heart),
     __TURNED_CARD(eight, club),
@@ -391,29 +391,29 @@ void test_move_waste_to_pile() {
 }
 
 void test_move_card_to_stack() {
-  carte waste_cards[] = {
+  card waste_cards[] = {
     __CARTE(two, diamond), __CARTE(ace, club), __CARTE(ace, diamond)
   };
-  carte diamond_stack_cards[] = {
+  card diamond_stack_cards[] = {
     __CARTE(no_value, diamond)
   };
-  carte club_stack_cards[] = {
+  card club_stack_cards[] = {
     __CARTE(no_value, club)
   };
-  carte pile_cards[] = {
+  card pile_cards[] = {
     __TURNED_CARD(three, club),
     __CARTE(three, diamond),
     __CARTE(two, club)
   };
 
-  carte final_diamond_stack_cards[] = {
+  card final_diamond_stack_cards[] = {
     __CARTE(no_value, diamond),
     __CARTE(ace, diamond),
     __CARTE(two, diamond),
     __CARTE(three, diamond)
   };
 
-  carte final_club_stack_cards[] = {
+  card final_club_stack_cards[] = {
     __CARTE(no_value, club),
     __CARTE(ace, club),
     __CARTE(two, club),
@@ -421,10 +421,10 @@ void test_move_card_to_stack() {
   };
 
   struct s_selection* selection = utl_create_selection();
-  struct s_piochees* waste      = utl_create_waste(waste_cards, 3);
-  struct s_tas* diamond_stack = utl_create_stack(diamond_stack_cards, 1);
-  struct s_tas* club_stack    = utl_create_stack(club_stack_cards, 1);
-  struct s_suites* pile         = utl_create_pile(pile_cards, 3);
+  struct s_waste* waste      = utl_create_waste(waste_cards, 3);
+  struct s_stack* diamond_stack = utl_create_stack(diamond_stack_cards, 1);
+  struct s_stack* club_stack    = utl_create_stack(club_stack_cards, 1);
+  struct s_piles* pile         = utl_create_pile(pile_cards, 3);
 
   TEST_DESCRIPTION("Move the ace of diamond to the diamond stack - Must work");
   assert(1 == utl_move_from_waste_to_stack(waste, diamond_stack, selection));
@@ -520,7 +520,7 @@ void test_move_card_to_stack() {
   assert_stack_cards(club_stack, final_club_stack_cards, 3);
   assert_pile_cards(pile, pile_cards, 1);
 
-  TURN_CARD(pile->cartes[0]);
+  TURN_CARD(pile->cards[0]);
 
   TEST_DESCRIPTION("Move the three of club to the club stack - Must work");
   assert(1 == utl_move_from_pile_to_stack(pile, club_stack, selection));
@@ -535,9 +535,9 @@ void test_move_card_to_stack() {
   free(club_stack);
 
   TEST_DESCRIPTION("Selection test due to the card trick...");
-  carte empty_stack_cards[] = { __CARTE(no_value, spade) };
+  card empty_stack_cards[] = { __CARTE(no_value, spade) };
 
-  struct s_tas *empty_stack = utl_create_stack(empty_stack_cards, 1);
+  struct s_stack *empty_stack = utl_create_stack(empty_stack_cards, 1);
   start_selection_from((struct s_zone *) empty_stack, zone_stack, selection);
 
   assert(selection->done == 0);
@@ -547,7 +547,7 @@ void test_move_card_to_stack() {
 
   TEST_DESCRIPTION("Only check the top card when trying to move cards from a stack");
 
-  carte third_stack_cards[] = {
+  card third_stack_cards[] = {
     __CARTE(no_value, heart),
     __CARTE(ace, heart),
     __CARTE(two, heart),
@@ -555,27 +555,27 @@ void test_move_card_to_stack() {
     __CARTE(four, heart),
     __CARTE(five, heart)
   };
-  carte third_pile_one_cards[] = {
+  card third_pile_one_cards[] = {
     __CARTE(five, spade)
   };
-  carte third_pile_one_cards_after_last_move[] = {
+  card third_pile_one_cards_after_last_move[] = {
     __CARTE(five, spade),
     __CARTE(four, heart)
   };
-  carte third_pile_two_cards[] = {
+  card third_pile_two_cards[] = {
     __CARTE(seven, diamond),
     __CARTE(six, spade)
   };
-  carte third_pile_two_cards_after_first_move[] = {
+  card third_pile_two_cards_after_first_move[] = {
     __CARTE(seven, diamond),
     __CARTE(six, spade),
     __CARTE(five, heart)
   };
 
 
-  struct s_tas* third_stack = utl_create_stack(third_stack_cards, 6);
-  struct s_suites* third_pile_one = utl_create_pile(third_pile_one_cards, 1);
-  struct s_suites* third_pile_two = utl_create_pile(third_pile_two_cards, 2);
+  struct s_stack* third_stack = utl_create_stack(third_stack_cards, 6);
+  struct s_piles* third_pile_one = utl_create_pile(third_pile_one_cards, 1);
+  struct s_piles* third_pile_two = utl_create_pile(third_pile_two_cards, 2);
 
   TEST_DESCRIPTION("Trying to move the 4 ♡ in the heart stack on the 5 ♠ - Must NOT work");
   TEST_ADDED_INFOS("The top card of the heart stack is the 5 ♡");
@@ -613,79 +613,79 @@ void test_move_card_to_stack() {
   free(selection);
 }
 
-extern struct s_elements_du_jeu elements_du_jeu;
-extern carte base_deck[], deck[];
+extern struct s_klondike_elements klondike_elements;
+extern card base_deck[], deck[];
 void test_state_after_distribute_deck() {
   TEST_DESCRIPTION("Deck distribution");
   generate_new_deck(deck, base_deck, DECK_SIZE, SHUFFLE_PASSES);
-  distribute_deck(deck, &elements_du_jeu);
+  distribute_deck(deck, &klondike_elements);
   TEST_DESCRIPTION("Checking the amount of cards in the pool and the waste");
-  assert(elements_du_jeu.pioche.placees == REMAINING_DECK);
+  assert(klondike_elements.pool.placed == REMAINING_DECK);
   for (unsigned int c = 0; c < REMAINING_DECK; c++) {
-    assert(elements_du_jeu.pioche.cartes[c].famille != no_family &&
-           elements_du_jeu.pioche.cartes[c].valeur  != no_value);
+    assert(klondike_elements.pool.cards[c].suit != no_suit &&
+           klondike_elements.pool.cards[c].value  != no_value);
   }
-  assert(elements_du_jeu.piochees.placees == 0);
+  assert(klondike_elements.waste.placed == 0);
 
   TEST_DESCRIPTION("Checking cards in piles");
   for (unsigned int p = 0; p < 7; p++) {
     TEST_ADDED_INFOS("Checking the amount");
-    struct s_suites pile = elements_du_jeu.suites[p];
-    assert(pile.placees == p+1);
+    struct s_piles pile = klondike_elements.piles[p];
+    assert(pile.placed == p+1);
 
     TEST_ADDED_INFOS("Checking if all cards beside the top card are downturned");
     for (unsigned c = 0; c < p; c++) {
       LOG("[%d/%d] %2d %s - IS DOWNTURNED ? %d\n",
-           c, p, pile.cartes[c].valeur, families_symbols[pile.cartes[c].famille],
-           IS_FACE_DOWN(pile.cartes[c]));
-      assert(IS_FACE_DOWN(pile.cartes[c]));
+           c, p, pile.cards[c].value, families_symbols[pile.cards[c].suit],
+           IS_FACE_DOWN(pile.cards[c]));
+      assert(IS_FACE_DOWN(pile.cards[c]));
     }
     LOG("[%d/%d] %2d %s - IS DOWNTURNED ? %d\n",
-         p, p, pile.cartes[p].valeur, families_symbols[pile.cartes[p].famille],
-         IS_FACE_DOWN(pile.cartes[p]));
+         p, p, pile.cards[p].value, families_symbols[pile.cards[p].suit],
+         IS_FACE_DOWN(pile.cards[p]));
   }
 
   TEST_DESCRIPTION("Checking cards in stacks");
   for (unsigned int s = 0; s < 4; s++) {
     TEST_ADDED_INFOS("Checking the amount");
-    assert(elements_du_jeu.tas[s].placees == 1); // Card trick
+    assert(klondike_elements.stack[s].placed == 1); // Card trick
 
     TEST_ADDED_INFOS("Checking the tricked card");
-    carte stack_top_card = elements_du_jeu.tas[s].cartes[0];
-    assert(stack_top_card.valeur  == no_value);
+    card stack_top_card = klondike_elements.stack[s].cards[0];
+    assert(stack_top_card.value  == no_value);
   }
 
   TEST_DESCRIPTION("Checking trick cards families");
-  assert(elements_du_jeu.tas[0].cartes[0].famille == spade);
-  assert(elements_du_jeu.tas[1].cartes[0].famille == heart);
-  assert(elements_du_jeu.tas[2].cartes[0].famille == diamond);
-  assert(elements_du_jeu.tas[3].cartes[0].famille == club);
+  assert(klondike_elements.stack[0].cards[0].suit == spade);
+  assert(klondike_elements.stack[1].cards[0].suit == heart);
+  assert(klondike_elements.stack[2].cards[0].suit == diamond);
+  assert(klondike_elements.stack[3].cards[0].suit == club);
 
   TEST_DESCRIPTION("Checking if every distributed card is unique");
-  carte distributed_deck[52] = {0};
+  card distributed_deck[52] = {0};
   struct s_zone *distribution_zones[] = {
-    (struct s_zone *) &(elements_du_jeu.pioche),
-    (struct s_zone *) (elements_du_jeu.suites+0),
-    (struct s_zone *) (elements_du_jeu.suites+1),
-    (struct s_zone *) (elements_du_jeu.suites+2),
-    (struct s_zone *) (elements_du_jeu.suites+3),
-    (struct s_zone *) (elements_du_jeu.suites+4),
-    (struct s_zone *) (elements_du_jeu.suites+5),
-    (struct s_zone *) (elements_du_jeu.suites+6)
+    (struct s_zone *) &(klondike_elements.pool),
+    (struct s_zone *) (klondike_elements.piles+0),
+    (struct s_zone *) (klondike_elements.piles+1),
+    (struct s_zone *) (klondike_elements.piles+2),
+    (struct s_zone *) (klondike_elements.piles+3),
+    (struct s_zone *) (klondike_elements.piles+4),
+    (struct s_zone *) (klondike_elements.piles+5),
+    (struct s_zone *) (klondike_elements.piles+6)
   };
 
   for (unsigned int d = 0; d < 8; d++) {
     struct s_zone *current_zone = distribution_zones[d];
-    carte *zone_cards = (carte *) &(current_zone->cartes);
-    for (unsigned c = 0; c < current_zone->placees; c++) {
-      carte current_card = zone_cards[c];
-      assert(current_card.valeur != no_value && current_card.famille != no_family);
+    card *zone_cards = (card *) &(current_zone->cards);
+    for (unsigned c = 0; c < current_zone->placed; c++) {
+      card current_card = zone_cards[c];
+      assert(current_card.value != no_value && current_card.suit != no_suit);
       if (IS_FACE_DOWN(current_card)) TURN_CARD(current_card);
 
       unsigned int deck_i =
-       ((current_card.famille - 1) * 13 + current_card.valeur - 1);
+       ((current_card.suit - 1) * 13 + current_card.value - 1);
       LOG("[%d/%d] %2d %s : deck_i : %d\n",
-          c, current_zone->placees, current_card.valeur, families_symbols[current_card.famille],
+          c, current_zone->placed, current_card.value, families_symbols[current_card.suit],
           deck_i);
       distributed_deck[deck_i] = current_card;
     }
@@ -694,44 +694,44 @@ void test_state_after_distribute_deck() {
   for (unsigned int f = 1; f < 5; f++) {
     for (unsigned int v = 1; v < 14; v++) {
       unsigned int deck_i = ((f - 1) * 13 + v - 1);
-      assert(distributed_deck[deck_i].valeur == v);
-      assert(distributed_deck[deck_i].famille == f);
+      assert(distributed_deck[deck_i].value == v);
+      assert(distributed_deck[deck_i].suit == f);
     }
   }
 
 }
 
 void test_pool() {
-  carte pool_cards[] = {
+  card pool_cards[] = {
     __CARTE(five, club),
     __CARTE(nine, spade), __CARTE(eight, diamond), __CARTE(jack, club),
     __CARTE(seven, spade), __CARTE(queen, spade), __CARTE(ten, diamond),
     __CARTE(queen, heart), __CARTE(seven, club), __CARTE(two, spade),
   };
 
-  carte pool_cards_after_first_move[] = {
+  card pool_cards_after_first_move[] = {
     __CARTE(five, club),  __CARTE(nine, spade), __CARTE(eight, diamond),
     __CARTE(jack, club), __CARTE(seven, spade), __CARTE(queen, spade),
     __CARTE(ten, diamond), __CARTE(seven, club), __CARTE(two, spade)
   };
-  carte pool_cards_after_second_move[] = {
+  card pool_cards_after_second_move[] = {
     __CARTE(five, club),  __CARTE(nine, spade),
     __CARTE(eight, diamond), __CARTE(seven, spade), __CARTE(queen, spade),
     __CARTE(ten, diamond), __CARTE(seven, club), __CARTE(two, spade),
   };
-  carte pool_cards_after_third_move[] = {
+  card pool_cards_after_third_move[] = {
     __CARTE(five, club),
     __CARTE(nine, spade), __CARTE(eight, diamond), __CARTE(seven, spade),
     __CARTE(queen, spade), __CARTE(seven, club), __CARTE(two, spade)
   };
-  carte pool_cards_after_last_moves[] = {
+  card pool_cards_after_last_moves[] = {
     __CARTE(five, club),
     __CARTE(queen, spade), __CARTE(seven, club), __CARTE(two, spade)
   };
-  carte pile_cards[] = {
+  card pile_cards[] = {
     __CARTE(king, spade)
   };
-  carte final_pile_cards[] = {
+  card final_pile_cards[] = {
     __CARTE(king, spade),
     __CARTE(queen, heart),
     __CARTE(jack, club),
@@ -741,9 +741,9 @@ void test_pool() {
     __CARTE(seven, spade)
   };
 
-  struct s_pioche *pool    = utl_create_pool(pool_cards, 10);
-  struct s_piochees *waste = utl_create_waste(0, 0);
-  struct s_suites *pile    = utl_create_pile(pile_cards, 1);
+  struct s_pool *pool    = utl_create_pool(pool_cards, 10);
+  struct s_waste *waste = utl_create_waste(0, 0);
+  struct s_piles *pile    = utl_create_pile(pile_cards, 1);
   struct s_selection *selection = utl_create_selection();
 
   draw_cards(3, pool, waste);

@@ -4,7 +4,7 @@ CC = clang
 ifeq ($(origin CFLAGS), undefined)
   CFLAGS = -O3 -march=native
 endif
-CFLAGS += -fPIC -fuse-ld=gold -DDEBUG
+CFLAGS += -fPIC -fuse-ld=gold
 INCLUDE_DIRS = -Imyy -I.
 LDFLAGS = -lGLESv2
 CCC := $(CC) $(CFLAGS) $(INCLUDE_DIRS)
@@ -13,7 +13,7 @@ X11_LDFLAGS = -lX11 -lEGL
 X11_SOURCES = $(shell find ./myy/platforms/X11 -name '*.c')
 
 ANDROID_CC = armv7a-hardfloat-linux-gnueabi-gcc
-ANDROID_CFLAGS = -fPIC -D__ANDROID__ -DANDROID -O3 -mthumb -mthumb-interwork -fuse-ld=gold -mfloat-abi=softfp -std=c11 -nostdlib -DDEBUG
+ANDROID_CFLAGS = -fPIC -D__ANDROID__ -DANDROID -O3 -mthumb -mthumb-interwork -fuse-ld=gold -mfloat-abi=softfp -std=c11 -nostdlib
 ANDROID_BASE_DIR = $(ANDROID_NDK_HOME)/platforms/android-15/arch-arm/usr
 ANDROID_CCC = $(ANDROID_CC) $(ANDROID_CFLAGS) -I$(ANDROID_BASE_DIR)/include $(INCLUDE_DIRS)
 ANDROID_LIBNAME = libmain.so

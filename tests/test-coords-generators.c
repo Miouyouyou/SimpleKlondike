@@ -4,7 +4,7 @@
 #include <helpers/log.h>
 
 extern struct gl_elements gl_elements;
-extern struct s_elements_du_jeu elements_du_jeu;
+extern struct s_klondike_elements klondike_elements;
 
 void assert_same_coords
 (GLCard *expected_coords, GLCard *coords, int n_coords) {
@@ -28,7 +28,7 @@ void assert_same_coords
 }
 
 void test_generate_card_quads() {
-  carte one_card_only[] = { __CARTE(ace, diamond) };
+  card one_card_only[] = { __CARTE(ace, diamond) };
 
   struct s_zone *all_zones_with_same_card =
     utl_zone_copy_with_same_cards_everywhere(one_card_only, 1);
@@ -71,7 +71,7 @@ void test_generate_card_quads() {
     malloc(13 * CARDS_IN_TOTAL * OPAQUE_QUADS_PER_CARD * sizeof(GLCard));
 
   struct generated_parts parts_generated =
-    generer_coordonnees_elements_du_jeu(
+    generate_coords_of_klondike_elements(
      &all_zones_with_same_card,
      transparent_quads, gl_elements.sample_card_top_address,
      opaque_quads, gl_elements.sample_card_bottom_address

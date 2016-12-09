@@ -180,7 +180,7 @@ struct hitbox zones_hitboxes[hitbox_unknown] = {
   {.range = {{.x = 114, .y = -98}, {.x = 120, .y = -108}}}
 };
 
-extern struct s_elements_du_jeu elements_du_jeu; // klondike.c
+extern struct s_klondike_elements klondike_elements; // klondike.c
 extern struct s_selection selection;             // klondike.c
 extern struct menu_hitboxes menus_hitactions[];  // opengl/menus.c
 
@@ -204,20 +204,20 @@ struct gl_elements gl_elements = {
   .sample_card_bottom_address = &(gl_cards_parts.bottom),
   .sample_card_body_address   = &(gl_cards_parts.opaque),
   .sample_selection_address   = &(gl_selection_parts),
-  .zones_du_jeu = {
-    (struct s_zone *) &(elements_du_jeu.pioche),
-    (struct s_zone *) &(elements_du_jeu.piochees),
-    (struct s_zone *)   elements_du_jeu.tas,
-    (struct s_zone *)  (elements_du_jeu.tas+1),
-    (struct s_zone *)  (elements_du_jeu.tas+2),
-    (struct s_zone *)  (elements_du_jeu.tas+3),
-    (struct s_zone *)   elements_du_jeu.suites,
-    (struct s_zone *)  (elements_du_jeu.suites+1),
-    (struct s_zone *)  (elements_du_jeu.suites+2),
-    (struct s_zone *)  (elements_du_jeu.suites+3),
-    (struct s_zone *)  (elements_du_jeu.suites+4),
-    (struct s_zone *)  (elements_du_jeu.suites+5),
-    (struct s_zone *)  (elements_du_jeu.suites+6)
+  .klondike_zones = {
+    (struct s_zone *) &(klondike_elements.pool),
+    (struct s_zone *) &(klondike_elements.waste),
+    (struct s_zone *)   klondike_elements.stack,
+    (struct s_zone *)  (klondike_elements.stack+1),
+    (struct s_zone *)  (klondike_elements.stack+2),
+    (struct s_zone *)  (klondike_elements.stack+3),
+    (struct s_zone *)   klondike_elements.piles,
+    (struct s_zone *)  (klondike_elements.piles+1),
+    (struct s_zone *)  (klondike_elements.piles+2),
+    (struct s_zone *)  (klondike_elements.piles+3),
+    (struct s_zone *)  (klondike_elements.piles+4),
+    (struct s_zone *)  (klondike_elements.piles+5),
+    (struct s_zone *)  (klondike_elements.piles+6)
   }
 };
 
@@ -263,19 +263,19 @@ static unsigned int generate_card_quads
 }
 
 static unsigned int generate_card
-(carte * restrict const card,
+(card * restrict const card,
  int const current_card_x_offset, int const current_card_y_offset,
  int const z_layer,
  GLCard * restrict const models, unsigned int const quads,
  GLCard * restrict const cpy) {
 
-  int8_t card_value = card->valeur;
+  int8_t card_value = card->value;
   uint16_t current_card_s_offset;
   uint16_t current_card_t_offset;
 
   if (card_value >= 0) {
     current_card_s_offset = card_value * CARD_TEX_S_STRIDE;
-    current_card_t_offset = (card->famille - 1) * CARD_TEX_T_STRIDE;
+    current_card_t_offset = (card->suit - 1) * CARD_TEX_T_STRIDE;
   }
   else {
     current_card_s_offset = CARD_BACK_TILE_NUMBER * CARD_TEX_S_STRIDE;
@@ -296,7 +296,7 @@ static unsigned int generate_opaque_parts
  GLCard * restrict const models,
  unsigned int const quads,
  GLCard * restrict cpy) {
-  /* Traiter toutes les cartes placées et générer des coordonées dans
+  /* Traiter toutes les cards placées et générer des coordonées dans
      GLCard */
 
   unsigned int
@@ -313,7 +313,7 @@ static unsigned int generate_opaque_parts
 
   do {
     unsigned int generated_quads =
-      generate_card(&zone->cartes[c], current_card_x_offset,
+      generate_card(&zone->cards[c], current_card_x_offset,
                     current_card_y_offset, -c, models, quads, cpy);
     total_quads += generated_quads;
     cpy += generated_quads;
@@ -333,7 +333,7 @@ static unsigned int generate_transparent_parts
  GLCard * restrict const models,
  unsigned int const quads,
  GLCard * restrict cpy) {
-  /* Traiter toutes les cartes placées et générer des coordonées dans
+  /* Traiter toutes les cards placées et générer des coordonées dans
      GLCard */
 
   // Set cards_to_display to 0 if the next cards are not offseted.
@@ -353,7 +353,7 @@ static unsigned int generate_transparent_parts
 
   for (unsigned int c = from_card_c; c <= to_card_c; c++) {
     unsigned int generated_quads =
-      generate_card(&zone->cartes[c], current_card_x_offset,
+      generate_card(&zone->cards[c], current_card_x_offset,
                     current_card_y_offset, -c, models, quads, cpy);
     total_quads += generated_quads;
     cpy += generated_quads;
@@ -378,7 +378,7 @@ void generate_horizontal_selection_around
       first_y_offset  = selected_zone->position.y * 258,
       second_y_offset =
         first_y_offset +
-        selected_zone->cards_offsets.y * (selected_zone->placees - 1) * 258,
+        selected_zone->cards_offsets.y * (selected_zone->placed - 1) * 258,
       s_offset = 14 * CARD_TEX_S_STRIDE,
       t_offset = 3 * CARD_TEX_T_STRIDE;
     GLshort offsets[2] = { first_y_offset, second_y_offset };
@@ -422,7 +422,7 @@ static unsigned int generate_stack_parts
   GLCard * restrict const models, unsigned int const quads,
   GLCard * restrict const cpy,
   struct s_zone ** restrict const zones) {
-  return generate_card(&zone->cartes[zone->placees-1], zone->position.x,
+  return generate_card(&zone->cards[zone->placed-1], zone->position.x,
                        zone->position.y, 0, models, quads, cpy);
 }
 
@@ -432,9 +432,9 @@ static unsigned int generate_pile_parts
  GLCard * restrict const models, unsigned int const quads,
  GLCard * restrict const cpy,
  struct s_zone ** restrict const zones) {
-  unsigned int cards_in_pile = zone->placees;
+  unsigned int cards_in_pile = zone->placed;
   if (cards_in_pile)
-    return generator_func(zone, 0, zone->placees-1, models, quads, cpy);
+    return generator_func(zone, 0, zone->placed-1, models, quads, cpy);
   else return 0;
 }
 
@@ -444,7 +444,7 @@ static unsigned int generate_waste_parts
  GLCard * restrict const models, unsigned int const quads,
  GLCard * restrict const cpy,
  struct s_zone ** restrict const zones) {
-  unsigned int cards_in_waste = zone->placees;
+  unsigned int cards_in_waste = zone->placed;
 
   if (cards_in_waste) {
 
@@ -466,14 +466,14 @@ static unsigned int generate_pool_parts
  GLCard * restrict const cpy,
  struct s_zone ** restrict const zones) {
 
-  struct s_piochees * waste = zones[e_waste];
+  struct s_waste * waste = zones[e_waste];
   unsigned int useful_pool =
-    pool_still_useful((struct s_pioche *) pool, waste,
+    pool_still_useful((struct s_pool *) pool, waste,
                       MAX_CARDS_PER_DRAW);
 
   const GLushort
     s_offset = 14 * CARD_TEX_S_STRIDE,
-    t_offset = (0 + (pool->placees == 0) + (useful_pool == 0))
+    t_offset = (0 + (pool->placed == 0) + (useful_pool == 0))
                 * CARD_TEX_T_STRIDE;
   const GLshort
     x_offset = pool->position.x,
@@ -483,7 +483,7 @@ static unsigned int generate_pool_parts
                              models, quads, cpy);
 }
 
-struct generated_parts generer_coordonnees_elements_du_jeu
+struct generated_parts generate_coords_of_klondike_elements
 (struct s_zone ** restrict const zones,
  GLCard * restrict transparent_coords,
  GLCard * restrict const transparent_models_parts,
@@ -536,7 +536,7 @@ struct generated_parts generer_coordonnees_elements_du_jeu
   return quads_generated;
 }
 
-void stocker_coordonnees_elements_du_jeu(GLCard *cards_coords,
+void store_coords_of_klondike_elements(GLCard *cards_coords,
   unsigned int n_cards, GLCard *parts_coords, unsigned int n_parts,
   BUS_two_tris_3D_quad *background) {
   const unsigned int
@@ -577,7 +577,7 @@ void stocker_coordonnees_elements_du_jeu(GLCard *cards_coords,
 
 void regen_cards_coords(struct gl_elements *gl_elements) {
   struct generated_parts parts_generated =
-    generer_coordonnees_elements_du_jeu(gl_elements->zones_du_jeu,
+    generate_coords_of_klondike_elements(gl_elements->klondike_zones,
       gl_elements->transparent_quads_address,
       gl_elements->sample_card_top_address,
       gl_elements->opaque_quads_address,
@@ -587,7 +587,7 @@ void regen_cards_coords(struct gl_elements *gl_elements) {
   current_buffer_id ^= 1;
   glBindBuffer(GL_ARRAY_BUFFER, gl_elements->coords_buffers[current_buffer_id]);
   gl_elements->current_buffer_id = current_buffer_id;
-  stocker_coordonnees_elements_du_jeu(
+  store_coords_of_klondike_elements(
     gl_elements->opaque_quads_address, parts_generated.opaque_quads,
     gl_elements->transparent_quads_address, parts_generated.transparent_quads,
     gl_elements->background_address

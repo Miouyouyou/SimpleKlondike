@@ -28,12 +28,12 @@
 #include <stdlib.h> // exit
 #include <fcntl.h> // open
 
-extern struct s_elements_du_jeu elements_du_jeu;
+extern struct s_klondike_elements klondike_elements;
 extern struct gl_elements gl_elements;
 extern struct s_selection selection;
 extern struct GLModelSelection gl_selection_parts;
-extern carte base_deck[];
-extern carte deck[];
+extern card base_deck[];
+extern card deck[];
 extern uint8_t scratch[];
 
 void no_action() {}
@@ -57,20 +57,20 @@ void myy_generate_new_state() {
   remove_selection(&selection);
   generate_new_deck(deck, base_deck, DECK_SIZE, SHUFFLE_PASSES);
 
-  klondike_reset_game_elements(&elements_du_jeu);
-  distribute_deck(deck, &elements_du_jeu);
+  klondike_reset_game_elements(&klondike_elements);
+  distribute_deck(deck, &klondike_elements);
 }
 
 void myy_save_state(struct myy_game_state *state) {
   unsigned int save_size =
-    save_state(gl_elements.zones_du_jeu, state->state);
+    save_state(gl_elements.klondike_zones, state->state);
   state->saved = (save_size == 228) ;
   state->size = save_size;
 }
 
 unsigned int myy_load_state(struct myy_game_state *state) {
-  return load_state(&elements_du_jeu, state->state,
-                    (struct s_elements_du_jeu *) scratch);
+  return load_state(&klondike_elements, state->state,
+                    (struct s_klondike_elements *) scratch);
 }
 
 void myy_resume_state(struct myy_game_state *state) {
@@ -112,15 +112,15 @@ void prepare_cards_buffers
 void gen_current_cards_coordinates
 (struct gl_elements * const gl_elements) {
   struct generated_parts const parts_generated =
-    generer_coordonnees_elements_du_jeu(
-      gl_elements->zones_du_jeu,
+    generate_coords_of_klondike_elements(
+      gl_elements->klondike_zones,
       gl_elements->transparent_quads_address,
       gl_elements->sample_card_top_address,
       gl_elements->opaque_quads_address,
       gl_elements->sample_card_body_address
     );
 
-  stocker_coordonnees_elements_du_jeu(
+  store_coords_of_klondike_elements(
     gl_elements->opaque_quads_address,
     parts_generated.opaque_quads,
     gl_elements->transparent_quads_address,
@@ -319,18 +319,18 @@ void myy_click
 
     unsigned int changed_cards = 0;
     if (h_z < hitbox_pause_hack) {
-      struct s_zone* const clicked_zone = gl_elements.zones_du_jeu[h_z];
+      struct s_zone* const clicked_zone = gl_elements.klondike_zones[h_z];
       if (z_t == zone_deck) {
-        struct s_pioche * const pioche = (struct s_pioche *) clicked_zone;
-        struct s_piochees * const piochees =
-          (struct s_piochees *) gl_elements.zones_du_jeu[hitbox_piochees];
+        struct s_pool * const pool = (struct s_pool *) clicked_zone;
+        struct s_waste * const waste =
+          (struct s_waste *) gl_elements.klondike_zones[hitbox_waste];
         LOG("%p == %p ?\n",
-            piochees, gl_elements.zones_du_jeu[hitbox_piochees]);
-        if (pool_still_useful(pioche, piochees, MAX_CARDS_PER_DRAW)) {
-          if (pioche->placees)
-            draw_cards(MAX_CARDS_PER_DRAW, pioche, piochees);
+            waste, gl_elements.klondike_zones[hitbox_waste]);
+        if (pool_still_useful(pool, waste, MAX_CARDS_PER_DRAW)) {
+          if (pool->placed)
+            draw_cards(MAX_CARDS_PER_DRAW, pool, waste);
           else {
-            reset_pool(pioche, piochees);
+            reset_pool(pool, waste);
             remove_selection(&selection);
           }
           changed_cards = 1;
@@ -338,7 +338,7 @@ void myy_click
       }
       else {
 
-        if (IS_FACE_UP( TOP_CARD_IN(((struct s_suites *) clicked_zone))) ) {
+        if (IS_FACE_UP( TOP_CARD_IN(((struct s_piles *) clicked_zone))) ) {
           if (selection.done) {
             changed_cards = move_selected_cards_to(clicked_zone, z_t, &selection);
             if (changed_cards) remove_selection(&selection);
@@ -348,7 +348,7 @@ void myy_click
           //regen_selection_around(&selection, clicked_zone);
         } // Turning cards automatically would avoid such stupid checks
         else {
-          TURN_CARD(TOP_CARD_IN(((struct s_suites*) clicked_zone)));
+          TURN_CARD(TOP_CARD_IN(((struct s_piles*) clicked_zone)));
           changed_cards = 1;
         }
       }
@@ -395,7 +395,7 @@ void myy_doubleclick(int x, int y, unsigned int button) {
 
   if (!displaying_a_menu &&
       (z_t == zone_pile || z_t == zone_waste) &&
-      quick_move(gl_elements.zones_du_jeu[h_z], &elements_du_jeu)) {
+      quick_move(gl_elements.klondike_zones[h_z], &klondike_elements)) {
     remove_selection(&selection);
     regen_cards_coords(&gl_elements);
     regen_and_store_selection_quad(
@@ -415,9 +415,9 @@ void load_game() {
   const unsigned fd = open("test.save", O_RDONLY);
   if (fd != -1) {
     read(fd, scratch, 228);
-    memset(scratch+228, 0, sizeof(struct s_elements_du_jeu));
-    if (load_state(&elements_du_jeu, scratch,
-                   (struct s_elements_du_jeu *) scratch+228)) {
+    memset(scratch+228, 0, sizeof(struct s_klondike_elements));
+    if (load_state(&klondike_elements, scratch,
+                   (struct s_klondike_elements *) scratch+228)) {
       remove_selection(&selection);
       regen_cards_coords(&gl_elements);
       regen_and_store_selection_quad(
@@ -436,7 +436,7 @@ void save_game() {
   const unsigned int fd =
     open("test.save", O_WRONLY|O_CREAT|O_TRUNC, 00664);
   if (fd != -1) {
-    unsigned int bytes_saved = save_state(gl_elements.zones_du_jeu, scratch);
+    unsigned int bytes_saved = save_state(gl_elements.klondike_zones, scratch);
     if (bytes_saved != write(fd, scratch, bytes_saved))
       LOG("Could not write the entire save !\n");
     close(fd);

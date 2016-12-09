@@ -7,15 +7,15 @@
 void test_check_pool_and_waste() {
 
   TEST_DESCRIPTION("Pool and waste with no cards are valid");
-  carte no_cards[] = {};
-  struct s_pioche *empty_pool = utl_create_pool(no_cards, 0);
-  struct s_piochees *empty_waste = utl_create_waste(no_cards, 0);
+  card no_cards[] = {};
+  struct s_pool *empty_pool = utl_create_pool(no_cards, 0);
+  struct s_waste *empty_waste = utl_create_waste(no_cards, 0);
 
   assert(1 == check_pool_and_waste(empty_pool, empty_waste));
 
   TEST_DESCRIPTION("A full pool OR a full waste is valid");
   TEST_ADDED_INFOS("However, both at the same time is invalid");
-  carte full_set[] = {
+  card full_set[] = {
     __CARTE(queen, diamond),
     __CARTE(queen, spade),
     __CARTE(seven, club),
@@ -42,8 +42,8 @@ void test_check_pool_and_waste() {
     __CARTE(eight, club)
   };
 
-  struct s_pioche *full_pool = utl_create_pool(full_set, 24);
-  struct s_piochees *full_waste = utl_create_waste(full_set, 24);
+  struct s_pool *full_pool = utl_create_pool(full_set, 24);
+  struct s_waste *full_waste = utl_create_waste(full_set, 24);
 
   assert(1 == check_pool_and_waste(full_pool, empty_waste));
   assert(1 == check_pool_and_waste(empty_pool, full_waste));
@@ -52,12 +52,12 @@ void test_check_pool_and_waste() {
   TEST_DESCRIPTION("One card waste or One card pool are valid");
   TEST_DESCRIPTION("As always, the sum of cards in the pool and \n"
                    "waste must not be over 24 !");
-  carte one_card[] = {
+  card one_card[] = {
     __CARTE(seven, diamond)
   };
 
-  struct s_pioche *one_card_pool = utl_create_pool(one_card, 1);
-  struct s_piochees *one_card_waste = utl_create_waste(one_card, 1);
+  struct s_pool *one_card_pool = utl_create_pool(one_card, 1);
+  struct s_waste *one_card_waste = utl_create_waste(one_card, 1);
 
   assert(1 == check_pool_and_waste(one_card_pool, one_card_waste));
   assert(1 == check_pool_and_waste(one_card_waste, one_card_pool));
@@ -67,20 +67,20 @@ void test_check_pool_and_waste() {
   assert(0 == check_pool_and_waste(one_card_pool, full_waste));
 
   TEST_DESCRIPTION("Turned cards are not allowed");
-  carte one_turned_card[] = {
+  card one_turned_card[] = {
     __CARTE(~seven, diamond)
   };
 
-  struct s_pioche *one_turned_card_pool = utl_create_pool(one_turned_card, 1);
-  struct s_piochees *one_turned_card_waste = utl_create_waste(one_turned_card, 1);
+  struct s_pool *one_turned_card_pool = utl_create_pool(one_turned_card, 1);
+  struct s_waste *one_turned_card_waste = utl_create_waste(one_turned_card, 1);
 
   assert(0 == check_pool_and_waste(one_turned_card_pool, one_turned_card_waste));
   assert(0 == check_pool_and_waste(one_turned_card_pool, empty_waste));
   assert(0 == check_pool_and_waste(empty_pool, one_turned_card_waste));
 
   TEST_DESCRIPTION("12 cards in the pool and waste, at the same time, is valid");
-  struct s_pioche *half_pool = utl_create_pool(full_set, 12);
-  struct s_piochees *half_waste = utl_create_waste(full_set+12, 12);
+  struct s_pool *half_pool = utl_create_pool(full_set, 12);
+  struct s_waste *half_waste = utl_create_waste(full_set+12, 12);
 
   assert(1 == check_pool_and_waste(half_pool, half_waste));
   assert(1 == check_pool_and_waste(empty_pool, half_waste));
@@ -109,9 +109,9 @@ void test_check_pool_and_waste() {
 
 void test_check_stacks_cards() {
   TEST_DESCRIPTION("Stacks without the bottom 'no_value' card are invalid");
-  const carte no_card[] = {};
+  const card no_card[] = {};
 
-  struct s_tas *invalid_stacks = utl_create_stacks(
+  struct s_stack *invalid_stacks = utl_create_stacks(
     no_card, 0,
     no_card, 0,
     no_card, 0,
@@ -121,40 +121,40 @@ void test_check_stacks_cards() {
   assert(0 == check_stacks_cards(invalid_stacks));
 
   TEST_DESCRIPTION("Empty stacks (with the no_value card at bottom) are valid");
-  const carte bottom_card_only[] = {
+  const card bottom_card_only[] = {
     __CARTE(no_value, spade),
     __CARTE(no_value, heart),
     __CARTE(no_value, diamond),
     __CARTE(no_value, club)
   };
 
-  struct s_tas *stacks = utl_create_stacks(
+  struct s_stack *stacks = utl_create_stacks(
     bottom_card_only, 1,
     bottom_card_only+1, 1,
     bottom_card_only+2, 1,
     bottom_card_only+3, 1
   );
 
-  struct s_tas *spade_stack   = stacks;
-  struct s_tas *heart_stack   = stacks+1;
-  struct s_tas *diamond_stack = stacks+2;
-  struct s_tas *club_stack    = stacks+3;
+  struct s_stack *spade_stack   = stacks;
+  struct s_stack *heart_stack   = stacks+1;
+  struct s_stack *diamond_stack = stacks+2;
+  struct s_stack *club_stack    = stacks+3;
 
   assert(1 == check_stacks_cards(stacks));
 
   TEST_DESCRIPTION("Even if cards are valid, if the number of cards is 0, the check should fail");
-  stacks[0].placees = 0;
+  stacks[0].placed = 0;
   assert(0 == check_stacks_cards(stacks));
-  stacks[0].placees = 1;
-  stacks[1].placees = 0;
+  stacks[0].placed = 1;
+  stacks[1].placed = 0;
   assert(0 == check_stacks_cards(stacks));
-  stacks[1].placees = 1;
-  stacks[2].placees = 0;
+  stacks[1].placed = 1;
+  stacks[2].placed = 0;
   assert(0 == check_stacks_cards(stacks));
-  stacks[2].placees = 1;
-  stacks[3].placees = 0;
+  stacks[2].placed = 1;
+  stacks[3].placed = 0;
   assert(0 == check_stacks_cards(stacks));
-  stacks[3].placees = 1;
+  stacks[3].placed = 1;
 
   TEST_DESCRIPTION("Empty stacks (with the no_value card at bottom) are valid (AGAIN)");
   assert(1 == check_stacks_cards(stacks));
@@ -197,7 +197,7 @@ void test_check_stacks_cards() {
   assert(1 == check_stacks_cards(stacks));
 
   TEST_DESCRIPTION("Full stack with the appropriate families are ok");
-  const carte all_cards[56] = {
+  const card all_cards[56] = {
     __CARTE(no_value,spade),
     __CARTE(ace,spade),
     __CARTE(two,spade),
@@ -266,24 +266,24 @@ void test_check_stacks_cards() {
 
   TEST_DESCRIPTION("Stack with cards not in ascending order are not allowed");
 
-  spade_stack->cartes[5].valeur = nine;
+  spade_stack->cards[5].value = nine;
   assert(0 == check_stacks_cards(stacks));
-  spade_stack->cartes[5].valeur = five;
+  spade_stack->cards[5].value = five;
   assert(1 == check_stacks_cards(stacks));
 
-  heart_stack->cartes[0].valeur = ~no_value;
+  heart_stack->cards[0].value = ~no_value;
   assert(0 == check_stacks_cards(stacks));
-  heart_stack->cartes[0].valeur = no_value;
+  heart_stack->cards[0].value = no_value;
   assert(1 == check_stacks_cards(stacks));
 
-  diamond_stack->cartes[13].valeur = ace;
+  diamond_stack->cards[13].value = ace;
   assert(0 == check_stacks_cards(stacks));
-  diamond_stack->cartes[13].valeur = king;
+  diamond_stack->cards[13].value = king;
   assert(1 == check_stacks_cards(stacks));
 
-  club_stack->cartes[10].valeur = -ten;
+  club_stack->cards[10].value = -ten;
   assert(0 == check_stacks_cards(stacks));
-  club_stack->cartes[10].valeur = ten;
+  club_stack->cards[10].value = ten;
   assert(1 == check_stacks_cards(stacks));
 
   free(stacks);
@@ -292,9 +292,9 @@ void test_check_stacks_cards() {
 
 void test_check_pile_cards() {
   TEST_DESCRIPTION("Empty piles are allowed");
-  carte no_card[] = {};
+  card no_card[] = {};
 
-  struct s_suites* piles = utl_create_piles(
+  struct s_piles* piles = utl_create_piles(
     no_card, 0,
     no_card, 0,
     no_card, 0,
@@ -308,7 +308,7 @@ void test_check_pile_cards() {
 
   TEST_DESCRIPTION("Only a specific amount of turned cards is allowed in each pile");
 
-  carte turned_cards[] = {
+  card turned_cards[] = {
     __CARTE(~three,heart),
     __CARTE(~two,spade),
     __CARTE(~ten,diamond),
@@ -317,7 +317,7 @@ void test_check_pile_cards() {
     __CARTE(~jack,spade),
     __CARTE(~five,heart)
   };
-  carte other_turned_cards[] = {
+  card other_turned_cards[] = {
     __CARTE(~king,spade),
     __CARTE(~four,club),
     __CARTE(~six,heart),
@@ -345,7 +345,7 @@ void test_check_pile_cards() {
 
   TEST_DESCRIPTION("Piles with only one face up card are valid");
 
-  carte one_card[] = {
+  card one_card[] = {
     __CARTE(five, spade)
   };
 
@@ -356,7 +356,7 @@ void test_check_pile_cards() {
 
   TEST_DESCRIPTION("Face up cards must be in descending order, alternate colors");
   TEST_ADDED_INFOS("A single faced up card can follow any turned cards without problems");
-  carte turned_cards_bad_suit[] = {
+  card turned_cards_bad_suit[] = {
     __CARTE(~king,spade),
     __CARTE(~jack,heart),
     __CARTE(~nine,club),
@@ -367,7 +367,7 @@ void test_check_pile_cards() {
     __CARTE(eight,heart),
   };
 
-  carte turned_face_up_turned[] = {
+  card turned_face_up_turned[] = {
     __CARTE(~king,spade),
     __CARTE(~jack,heart),
     __CARTE(~nine,club),
@@ -378,7 +378,7 @@ void test_check_pile_cards() {
     __CARTE(~seven,club),
   };
 
-  carte turned_cards_good_suit[] = {
+  card turned_cards_good_suit[] = {
     __CARTE(~king,spade),
     __CARTE(~jack,heart),
     __CARTE(~nine,club),
@@ -402,7 +402,7 @@ void test_check_pile_cards() {
     assert(1 == check_piles_cards(piles));
   }
 
-  carte bad_card[] = {
+  card bad_card[] = {
     __CARTE(38, 26),
     __CARTE(27, spade),
     __CARTE(eight, 5)
@@ -417,7 +417,7 @@ void test_check_pile_cards() {
     assert(0 == check_piles_cards(piles));
   }
 
-  carte bad_turned_card[] = {
+  card bad_turned_card[] = {
     __CARTE(~45, 87),
     __CARTE(~14, heart),
     __CARTE(~two, -1)
@@ -438,28 +438,28 @@ void test_check_pile_cards() {
 void test_check_all_cards_unique() {
   TEST_DESCRIPTION("If all cards are unique, check_all_cards must return 1");
 
-  struct s_elements_du_jeu *test_elements =
-    (struct s_elements_du_jeu *) malloc(sizeof(struct s_elements_du_jeu));
+  struct s_klondike_elements *test_elements =
+    (struct s_klondike_elements *) malloc(sizeof(struct s_klondike_elements));
 
   struct s_zone* zones[] = {
-    (struct s_zone *) &(test_elements->pioche),
-    (struct s_zone *) &(test_elements->piochees),
-    (struct s_zone *)   test_elements->tas,
-    (struct s_zone *)  (test_elements->tas+1),
-    (struct s_zone *)  (test_elements->tas+2),
-    (struct s_zone *)  (test_elements->tas+3),
-    (struct s_zone *)   test_elements->suites,
-    (struct s_zone *)  (test_elements->suites+1),
-    (struct s_zone *)  (test_elements->suites+2),
-    (struct s_zone *)  (test_elements->suites+3),
-    (struct s_zone *)  (test_elements->suites+4),
-    (struct s_zone *)  (test_elements->suites+5),
-    (struct s_zone *)  (test_elements->suites+6)
+    (struct s_zone *) &(test_elements->pool),
+    (struct s_zone *) &(test_elements->waste),
+    (struct s_zone *)   test_elements->stack,
+    (struct s_zone *)  (test_elements->stack+1),
+    (struct s_zone *)  (test_elements->stack+2),
+    (struct s_zone *)  (test_elements->stack+3),
+    (struct s_zone *)   test_elements->piles,
+    (struct s_zone *)  (test_elements->piles+1),
+    (struct s_zone *)  (test_elements->piles+2),
+    (struct s_zone *)  (test_elements->piles+3),
+    (struct s_zone *)  (test_elements->piles+4),
+    (struct s_zone *)  (test_elements->piles+5),
+    (struct s_zone *)  (test_elements->piles+6)
   };
 
   utl_empty_elements(test_elements);
 
-  carte temp_deck[DECK_SIZE] = {
+  card temp_deck[DECK_SIZE] = {
     __CARTE(ace,spade),   __CARTE(two,spade),   __CARTE(three,spade),
     __CARTE(four,spade),  __CARTE(five,spade),  __CARTE(six,spade),
     __CARTE(seven,spade), __CARTE(eight,spade), __CARTE(nine,spade),
@@ -488,14 +488,14 @@ void test_check_all_cards_unique() {
   TEST_DESCRIPTION("If there's doubles, check_all_cards_unique should return 0");
 
 
-  int8_t original_value = temp_deck[5].valeur;
-  temp_deck[5].valeur = ace;
+  int8_t original_value = temp_deck[5].value;
+  temp_deck[5].value = ace;
 
   utl_empty_elements(test_elements);
   distribute_deck(temp_deck, test_elements);
   assert(0 == check_all_cards_unique(zones));
 
-  temp_deck[5].valeur = original_value;
+  temp_deck[5].value = original_value;
 
   utl_empty_elements(test_elements);
   distribute_deck(temp_deck, test_elements);
@@ -505,31 +505,31 @@ void test_check_all_cards_unique() {
 
   utl_empty_elements(test_elements);
   distribute_deck(temp_deck, test_elements);
-  utl_set_cards_of((struct s_zone *) &(test_elements->pioche), temp_deck, 0);
+  utl_set_cards_of((struct s_zone *) &(test_elements->pool), temp_deck, 0);
   assert(0 == check_all_cards_unique(zones));
 
   TEST_DESCRIPTION("If there's invalid values, check_all_cards_unique should return 0");
-  original_value = temp_deck[27].valeur;
-  temp_deck[27].valeur = 39;
+  original_value = temp_deck[27].value;
+  temp_deck[27].value = 39;
 
   utl_empty_elements(test_elements);
   distribute_deck(temp_deck, test_elements);
   assert(0 == check_all_cards_unique(zones));
 
-  temp_deck[27].valeur = original_value;
+  temp_deck[27].value = original_value;
 
   utl_empty_elements(test_elements);
   distribute_deck(temp_deck, test_elements);
   assert(1 == check_all_cards_unique(zones));
 
-  original_value = temp_deck[51].famille;
-  temp_deck[51].famille = -78;
+  original_value = temp_deck[51].suit;
+  temp_deck[51].suit = -78;
 
   utl_empty_elements(test_elements);
   distribute_deck(temp_deck, test_elements);
   assert(0 == check_all_cards_unique(zones));
 
-  temp_deck[51].famille = original_value;
+  temp_deck[51].suit = original_value;
 
   utl_empty_elements(test_elements);
   distribute_deck(temp_deck, test_elements);
@@ -540,10 +540,10 @@ void test_check_all_cards_unique() {
 
 void test_check_load_and_save() {
   TEST_DESCRIPTION("Saving and loading a simple game should work");
-  struct s_elements_du_jeu *test_elements =
-    (struct s_elements_du_jeu *) malloc(sizeof(struct s_elements_du_jeu));
+  struct s_klondike_elements *test_elements =
+    (struct s_klondike_elements *) malloc(sizeof(struct s_klondike_elements));
 
-  carte temp_deck[DECK_SIZE] = {
+  card temp_deck[DECK_SIZE] = {
     __CARTE(ace,spade),   __CARTE(two,spade),   __CARTE(three,spade),
     __CARTE(four,spade),  __CARTE(five,spade),  __CARTE(six,spade),
     __CARTE(seven,spade), __CARTE(eight,spade), __CARTE(nine,spade),
@@ -567,19 +567,19 @@ void test_check_load_and_save() {
   };
 
   struct s_zone *test_zones[] = {
-    (struct s_zone *) &(test_elements->pioche),
-    (struct s_zone *) &(test_elements->piochees),
-    (struct s_zone *)   test_elements->tas,
-    (struct s_zone *)  (test_elements->tas+1),
-    (struct s_zone *)  (test_elements->tas+2),
-    (struct s_zone *)  (test_elements->tas+3),
-    (struct s_zone *)   test_elements->suites,
-    (struct s_zone *)  (test_elements->suites+1),
-    (struct s_zone *)  (test_elements->suites+2),
-    (struct s_zone *)  (test_elements->suites+3),
-    (struct s_zone *)  (test_elements->suites+4),
-    (struct s_zone *)  (test_elements->suites+5),
-    (struct s_zone *)  (test_elements->suites+6)
+    (struct s_zone *) &(test_elements->pool),
+    (struct s_zone *) &(test_elements->waste),
+    (struct s_zone *)   test_elements->stack,
+    (struct s_zone *)  (test_elements->stack+1),
+    (struct s_zone *)  (test_elements->stack+2),
+    (struct s_zone *)  (test_elements->stack+3),
+    (struct s_zone *)   test_elements->piles,
+    (struct s_zone *)  (test_elements->piles+1),
+    (struct s_zone *)  (test_elements->piles+2),
+    (struct s_zone *)  (test_elements->piles+3),
+    (struct s_zone *)  (test_elements->piles+4),
+    (struct s_zone *)  (test_elements->piles+5),
+    (struct s_zone *)  (test_elements->piles+6)
   };
 
   utl_empty_elements(test_elements);
@@ -587,16 +587,16 @@ void test_check_load_and_save() {
   uint8_t *buffer = malloc(228);
   assert(228 == save_state(test_zones, buffer));
 
-  struct s_elements_du_jeu *empty_elements =
-    (struct s_elements_du_jeu *) malloc(sizeof(struct s_elements_du_jeu));
-  struct s_elements_du_jeu *target_elements =
-    (struct s_elements_du_jeu *) malloc(sizeof(struct s_elements_du_jeu));
+  struct s_klondike_elements *empty_elements =
+    (struct s_klondike_elements *) malloc(sizeof(struct s_klondike_elements));
+  struct s_klondike_elements *target_elements =
+    (struct s_klondike_elements *) malloc(sizeof(struct s_klondike_elements));
 
   utl_empty_elements(target_elements);
 
   assert(1 == load_state(target_elements, buffer, empty_elements));
 
-  assert(0 == memcmp(test_elements, target_elements, sizeof(struct s_elements_du_jeu)));
+  assert(0 == memcmp(test_elements, target_elements, sizeof(struct s_klondike_elements)));
   free(target_elements);
   free(empty_elements);
   free(buffer);
@@ -623,7 +623,7 @@ void test_check_load_and_save() {
  * - Checking that returned cards in piles are of the right suit
  *   and in descending order.
  * Load the game implies that :
- * - s_elements_du_jeu contains the 52 card loaded correctly.
+ * - s_klondike_elements contains the 52 card loaded correctly.
  *
  * load_data still expects that the data are correctly terminated.
  */

@@ -58,65 +58,65 @@ struct s_selection * utl_create_selection() {
 }
 
 
-void utl_set_cards_of(struct s_zone* zone, const carte *cartes, unsigned int placees) {
-  carte *zone_cards = (carte *) &(zone->cartes);
+void utl_set_cards_of(struct s_zone* zone, const card *cards, unsigned int placed) {
+  card *zone_cards = (card *) &(zone->cards);
 
-  for (unsigned int c = 0; c < placees; c++) zone_cards[c] = cartes[c];
+  for (unsigned int c = 0; c < placed; c++) zone_cards[c] = cards[c];
 
-  for (unsigned int c = 0; c < placees; c++) {
-    assert(zone_cards[c].famille == cartes[c].famille);
-    assert(zone_cards[c].valeur  == cartes[c].valeur);
-    LOG("[Card %2d] %2d%s\n", c, cartes[c].valeur, families_symbols[cartes[c].famille]);
+  for (unsigned int c = 0; c < placed; c++) {
+    assert(zone_cards[c].suit == cards[c].suit);
+    assert(zone_cards[c].value  == cards[c].value);
+    LOG("[Card %2d] %2d%s\n", c, cards[c].value, families_symbols[cards[c].suit]);
   }
-  LOG("[%d Cards set]\n", placees);
-  zone->placees = placees;
+  LOG("[%d Cards set]\n", placed);
+  zone->placed = placed;
 }
 
 void utl_prepare_zone
-(struct s_zone* zone, const carte *cartes, unsigned int placees, unsigned int max) {
+(struct s_zone* zone, const card *cards, unsigned int placed, unsigned int max) {
 
   zone->max     = max;
-  utl_set_cards_of(zone, cartes, placees);
-  assert(zone->placees == placees);
+  utl_set_cards_of(zone, cards, placed);
+  assert(zone->placed == placed);
   assert(zone->max     == max);
 }
 
-#define GENERATOR_HEADER(type) LOG("[utl_create_"type"] Generating "type" with %d cards\n", placees)
+#define GENERATOR_HEADER(type) LOG("[utl_create_"type"] Generating "type" with %d cards\n", placed)
 
-struct s_pioche* utl_create_pool(carte *cartes, unsigned int placees) {
+struct s_pool* utl_create_pool(card *cards, unsigned int placed) {
   GENERATOR_HEADER("pool");
-  struct s_pioche* pool = malloc(sizeof(struct s_pioche));
-  utl_prepare_zone((struct s_zone *) pool, cartes, placees, placees);
+  struct s_pool* pool = malloc(sizeof(struct s_pool));
+  utl_prepare_zone((struct s_zone *) pool, cards, placed, placed);
   return pool;
 }
 
-struct s_piochees* utl_create_waste(carte *cartes, unsigned int placees) {
+struct s_waste* utl_create_waste(card *cards, unsigned int placed) {
   GENERATOR_HEADER("waste");
 
-  struct s_piochees* waste = malloc(sizeof(struct s_piochees));
-  utl_prepare_zone((struct s_zone *) waste, cartes, placees, MAX_CARDS_PER_DRAW);
+  struct s_waste* waste = malloc(sizeof(struct s_waste));
+  utl_prepare_zone((struct s_zone *) waste, cards, placed, MAX_CARDS_PER_DRAW);
   return waste;
 }
 
-struct s_suites* utl_create_pile(carte *cartes, unsigned int placees) {
+struct s_piles* utl_create_pile(card *cards, unsigned int placed) {
   GENERATOR_HEADER("pile");
-  struct s_suites* pile = malloc(sizeof(struct s_suites));
-  utl_prepare_zone((struct s_zone *) pile, cartes, placees, MAX_CARDS_PER_PILE);
+  struct s_piles* pile = malloc(sizeof(struct s_piles));
+  utl_prepare_zone((struct s_zone *) pile, cards, placed, MAX_CARDS_PER_PILE);
   return pile;
 }
 
-struct s_tas* utl_create_stack(carte *cartes, unsigned int placees) {
+struct s_stack* utl_create_stack(card *cards, unsigned int placed) {
   GENERATOR_HEADER("stack");
-  struct s_tas* stack = malloc(sizeof(struct s_tas));
-  utl_prepare_zone((struct s_zone *) stack, cartes, placees, REMAINING_DECK);
+  struct s_stack* stack = malloc(sizeof(struct s_stack));
+  utl_prepare_zone((struct s_zone *) stack, cards, placed, REMAINING_DECK);
   return stack;
 }
 
-struct s_tas* utl_create_stacks
-(const carte *spade_cards, const unsigned int spades,
- const carte *heart_cards, const unsigned int hearts,
- const carte *diamond_cards, const unsigned int diamonds,
- const carte *club_cards, const unsigned clubs) {
+struct s_stack* utl_create_stacks
+(const card *spade_cards, const unsigned int spades,
+ const card *heart_cards, const unsigned int hearts,
+ const card *diamond_cards, const unsigned int diamonds,
+ const card *club_cards, const unsigned clubs) {
   LOG("[utl_create_stacks] Generating 4 stacks with :\n"
       "  ♠ : %d cards\n"
       "  ♡ : %d cards\n"
@@ -124,7 +124,7 @@ struct s_tas* utl_create_stacks
       "  ♣ : %d cards\n",
       spades, hearts, diamonds, clubs);
 
-  struct s_tas* stacks = malloc(sizeof(struct s_tas)*4);
+  struct s_stack* stacks = malloc(sizeof(struct s_stack)*4);
   utl_prepare_zone((struct s_zone *)  stacks, spade_cards, spades, MAX_CARDS_PER_STACK);
   utl_prepare_zone((struct s_zone *) (stacks+1), heart_cards, hearts, MAX_CARDS_PER_STACK);
   utl_prepare_zone((struct s_zone *) (stacks+2), diamond_cards, diamonds, MAX_CARDS_PER_STACK);
@@ -132,16 +132,16 @@ struct s_tas* utl_create_stacks
   return stacks;
 }
 
-struct s_suites* utl_create_piles
-(const carte *pile1, const unsigned int pile1_cards,
- const carte *pile2, const unsigned int pile2_cards,
- const carte *pile3, const unsigned int pile3_cards,
- const carte *pile4, const unsigned int pile4_cards,
- const carte *pile5, const unsigned int pile5_cards,
- const carte *pile6, const unsigned int pile6_cards,
- const carte *pile7, const unsigned int pile7_cards) {
+struct s_piles* utl_create_piles
+(const card *pile1, const unsigned int pile1_cards,
+ const card *pile2, const unsigned int pile2_cards,
+ const card *pile3, const unsigned int pile3_cards,
+ const card *pile4, const unsigned int pile4_cards,
+ const card *pile5, const unsigned int pile5_cards,
+ const card *pile6, const unsigned int pile6_cards,
+ const card *pile7, const unsigned int pile7_cards) {
 
-  struct s_suites* piles = malloc(sizeof(struct s_suites)*7);
+  struct s_piles* piles = malloc(sizeof(struct s_piles)*7);
 
   utl_prepare_zone((struct s_zone *) (piles),   pile1, pile1_cards, MAX_CARDS_PER_PILE);
   utl_prepare_zone((struct s_zone *) (piles+1), pile2, pile2_cards, MAX_CARDS_PER_PILE);
@@ -162,82 +162,82 @@ void utl_reset_selection(struct s_selection *selection) {
 }
 
 
-void utl_empty_elements(struct s_elements_du_jeu *elements) {
-  memset(elements, 0, sizeof(struct s_elements_du_jeu));
-  carte stacks_cards[] = {
+void utl_empty_elements(struct s_klondike_elements *elements) {
+  memset(elements, 0, sizeof(struct s_klondike_elements));
+  card stacks_cards[] = {
     __CARTE(no_value, spade),
     __CARTE(no_value, heart),
     __CARTE(no_value, diamond),
     __CARTE(no_value, club)
   };
-  utl_set_cards_of((struct s_zone *)  elements->tas,    stacks_cards,   1);
-  utl_set_cards_of((struct s_zone *) (elements->tas+1), stacks_cards+1, 1);
-  utl_set_cards_of((struct s_zone *) (elements->tas+2), stacks_cards+2, 1);
-  utl_set_cards_of((struct s_zone *) (elements->tas+3), stacks_cards+3, 1);
+  utl_set_cards_of((struct s_zone *)  elements->stack,    stacks_cards,   1);
+  utl_set_cards_of((struct s_zone *) (elements->stack+1), stacks_cards+1, 1);
+  utl_set_cards_of((struct s_zone *) (elements->stack+2), stacks_cards+2, 1);
+  utl_set_cards_of((struct s_zone *) (elements->stack+3), stacks_cards+3, 1);
 }
 
-void assert_zone_cards(struct s_zone *zone, carte *cards, unsigned int n_cards) {
+void assert_zone_cards(struct s_zone *zone, card *cards, unsigned int n_cards) {
 
-  carte *zone_cards = (carte *) &(zone->cartes);
+  card *zone_cards = (card *) &(zone->cards);
   for (unsigned int c = 0; c < n_cards; c++) {
     assert( SAME_CARDS(zone_cards[c], cards[c]) );
-    LOG("[P Card %d] %2d %s <-> ", c, zone_cards[c].valeur, families_symbols[zone_cards[c].famille]);
-    LOG("[C Card %d] %2d %s\n", c, cards[c].valeur, families_symbols[cards[c].famille]);
+    LOG("[P Card %d] %2d %s <-> ", c, zone_cards[c].value, families_symbols[zone_cards[c].suit]);
+    LOG("[C Card %d] %2d %s\n", c, cards[c].value, families_symbols[cards[c].suit]);
   }
-  if (n_cards < zone->placees) {
+  if (n_cards < zone->placed) {
     LOG("Superfluous cards !!\n");
-    for (unsigned int c = n_cards; c < zone->placees; c++) {
-      LOG("[O Card %d] %2d %s\n", c, zone_cards[c].valeur, families_symbols[zone_cards[c].famille]);
+    for (unsigned int c = n_cards; c < zone->placed; c++) {
+      LOG("[O Card %d] %2d %s\n", c, zone_cards[c].value, families_symbols[zone_cards[c].suit]);
     }
   }
-  assert(zone->placees == n_cards);
+  assert(zone->placed == n_cards);
 }
 
 void assert_reverse_zone_cards
-(struct s_zone *zone, carte *cards,
+(struct s_zone *zone, card *cards,
  unsigned int n_cards, unsigned int total_cards) {
-  carte *zone_cards = (carte *) &(zone->cartes);
+  card *zone_cards = (card *) &(zone->cards);
   int z_c = 0,
-      cartes_c = total_cards - 1;
-  for (z_c = 0; z_c < n_cards; z_c++, cartes_c--) {
+      cards_c = total_cards - 1;
+  for (z_c = 0; z_c < n_cards; z_c++, cards_c--) {
 
-    LOG("[P Card %d] %2d %s <-> ", z_c, zone_cards[z_c].valeur, families_symbols[zone_cards[z_c].famille]);
-    LOG("[C Card %d] %2d %s\n", cartes_c, cards[cartes_c].valeur, families_symbols[cards[cartes_c].famille]);
-    assert( SAME_CARDS(zone_cards[z_c], cards[cartes_c]) );
+    LOG("[P Card %d] %2d %s <-> ", z_c, zone_cards[z_c].value, families_symbols[zone_cards[z_c].suit]);
+    LOG("[C Card %d] %2d %s\n", cards_c, cards[cards_c].value, families_symbols[cards[cards_c].suit]);
+    assert( SAME_CARDS(zone_cards[z_c], cards[cards_c]) );
   }
-  if (n_cards < zone->placees) {
+  if (n_cards < zone->placed) {
     LOG("Superfluous cards !!\n");
-    for (unsigned int c = n_cards; c < zone->placees; c++) {
-      LOG("[O Card %d] %2d %s\n", c, zone_cards[c].valeur, families_symbols[zone_cards[c].famille]);
+    for (unsigned int c = n_cards; c < zone->placed; c++) {
+      LOG("[O Card %d] %2d %s\n", c, zone_cards[c].value, families_symbols[zone_cards[c].suit]);
     }
   }
-  assert(zone->placees == n_cards);
+  assert(zone->placed == n_cards);
 }
 
 void assert_pool_cards
-(struct s_pioche *pool, carte *cards, unsigned int n_cards, unsigned int max) {
+(struct s_pool *pool, card *cards, unsigned int n_cards, unsigned int max) {
   LOG("Checking pool cards... %2d (%2d) cards (max : %2d)\n",
-       n_cards, pool->placees, max);
+       n_cards, pool->placed, max);
   assert_zone_cards((struct s_zone *) pool, cards, n_cards);
 }
-void assert_pile_cards(struct s_suites *pile, carte *cards, unsigned int n_cards) {
-  LOG("Checking pile with... %2d (%2d) cards\n", n_cards, pile->placees);
+void assert_pile_cards(struct s_piles *pile, card *cards, unsigned int n_cards) {
+  LOG("Checking pile with... %2d (%2d) cards\n", n_cards, pile->placed);
   assert_zone_cards((struct s_zone *) pile, cards, n_cards);
 }
-void assert_waste_cards(struct s_piochees *waste, carte *cards, unsigned int n_cards) {
-  LOG("Checking waste with... %2d (%2d) cards\n", n_cards, waste->placees);
+void assert_waste_cards(struct s_waste *waste, card *cards, unsigned int n_cards) {
+  LOG("Checking waste with... %2d (%2d) cards\n", n_cards, waste->placed);
   assert_zone_cards((struct s_zone *) waste, cards, n_cards);
 }
 
 void assert_waste_cards_inverse_of
-(struct s_piochees *waste, carte *cards, unsigned int n_cards, unsigned int total_cards) {
-  LOG("Checking waste with... %2d (%2d) cards\n", n_cards, waste->placees);
+(struct s_waste *waste, card *cards, unsigned int n_cards, unsigned int total_cards) {
+  LOG("Checking waste with... %2d (%2d) cards\n", n_cards, waste->placed);
   assert_reverse_zone_cards((struct s_zone *) waste, cards, n_cards, total_cards);
 }
 
-void assert_stack_cards(struct s_tas *tas, carte *cards, unsigned int n_cards) {
-  LOG("Checking stack with... %2d (%2d) cards\n", n_cards, tas->placees);
-  assert_zone_cards((struct s_zone *) tas, cards, n_cards);
+void assert_stack_cards(struct s_stack *stack, card *cards, unsigned int n_cards) {
+  LOG("Checking stack with... %2d (%2d) cards\n", n_cards, stack->placed);
+  assert_zone_cards((struct s_zone *) stack, cards, n_cards);
 }
 
 unsigned int select_src_then_dst
@@ -248,7 +248,7 @@ unsigned int select_src_then_dst
 }
 
 unsigned int utl_move_from_pile_to_pile
-(struct s_suites* src, struct s_suites* dst, struct s_selection* selection) {
+(struct s_piles* src, struct s_piles* dst, struct s_selection* selection) {
   return select_src_then_dst(
     (struct s_zone *) src, (struct s_zone *) dst,
     zone_pile, zone_pile, selection
@@ -256,7 +256,7 @@ unsigned int utl_move_from_pile_to_pile
 }
 
 unsigned int utl_move_from_pile_to_stack
-(struct s_suites* pile, struct s_tas* stack, struct s_selection* selection) {
+(struct s_piles* pile, struct s_stack* stack, struct s_selection* selection) {
   return select_src_then_dst(
     (struct s_zone *) pile, (struct s_zone *) stack, zone_pile, zone_stack,
     selection
@@ -264,7 +264,7 @@ unsigned int utl_move_from_pile_to_stack
 }
 
 unsigned int utl_move_from_waste_to_pile
-(struct s_piochees* waste, struct s_suites* pile, struct s_selection* selection) {
+(struct s_waste* waste, struct s_piles* pile, struct s_selection* selection) {
   return select_src_then_dst(
     (struct s_zone *) waste, (struct s_zone *) pile,
     zone_waste, zone_pile, selection
@@ -272,7 +272,7 @@ unsigned int utl_move_from_waste_to_pile
  }
 
 unsigned int utl_move_from_waste_to_stack
-(struct s_piochees* waste, struct s_tas* stack, struct s_selection* selection) {
+(struct s_waste* waste, struct s_stack* stack, struct s_selection* selection) {
   return select_src_then_dst(
     (struct s_zone *) waste, (struct s_zone *) stack, zone_waste, zone_stack,
     selection
@@ -280,7 +280,7 @@ unsigned int utl_move_from_waste_to_stack
 }
 
 unsigned int utl_move_from_stack_to_pile
-(struct s_tas* stack, struct s_suites *pile, struct s_selection* selection) {
+(struct s_stack* stack, struct s_piles *pile, struct s_selection* selection) {
   return select_src_then_dst(
     (struct s_zone *) stack, (struct s_zone *) pile, zone_stack, zone_pile,
     selection

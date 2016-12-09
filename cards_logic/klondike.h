@@ -37,38 +37,38 @@
 #define POS_SUIT_7 90
 
 
-struct s_pioche   {
-  struct byte_point_2D position, cards_offsets; uint8_t animating;
-  uint8_t placees, max; carte cartes[REMAINING_DECK];
+struct s_pool   {
+  struct byte_point_2D position, cards_offsets;
+  uint8_t placed, max; card cards[REMAINING_DECK];
 };
-struct s_piochees {
-  struct byte_point_2D position, cards_offsets; uint8_t animating;
-  uint8_t placees, max; carte cartes[REMAINING_DECK];
+struct s_waste {
+  struct byte_point_2D position, cards_offsets;
+  uint8_t placed, max; card cards[REMAINING_DECK];
 };
-struct s_tas      {
-  struct byte_point_2D position, cards_offsets; uint8_t animating;
-  uint8_t placees, max; carte cartes[MAX_CARDS_PER_STACK];
+struct s_stack      {
+  struct byte_point_2D position, cards_offsets;
+  uint8_t placed, max; card cards[MAX_CARDS_PER_STACK];
 };
-struct s_suites   {
-  struct byte_point_2D position, cards_offsets; uint8_t animating;
-  uint8_t placees, max; carte cartes[MAX_CARDS_PER_PILE];
-};
-
-struct s_elements_du_jeu {
- struct s_pioche   pioche;
- struct s_piochees piochees;
- struct s_tas      tas[4];
- struct s_suites   suites[7];
+struct s_piles   {
+  struct byte_point_2D position, cards_offsets;
+  uint8_t placed, max; card cards[MAX_CARDS_PER_PILE];
 };
 
-enum e_elements_du_jeu {
+struct s_klondike_elements {
+ struct s_pool   pool;
+ struct s_waste  waste;
+ struct s_stack  stack[4];
+ struct s_piles  piles[7];
+};
+
+enum e_klondike_elements {
   e_pool, e_waste, e_spade_stack, e_heart_stack,
   e_diamond_stack, e_club_stack, e_pile_1, e_pile_2, e_pile_3,
   e_pile_4, e_pile_5, e_pile_6, e_pile_7, n_game_elements
 };
 
 void klondike_reset_game_elements
-(struct s_elements_du_jeu * const game_elements);
+(struct s_klondike_elements * const game_elements);
 
 unsigned int add_card_to_stack
 (struct s_zone* , struct s_zone*, struct s_selection* );
@@ -77,16 +77,16 @@ unsigned int add_card_to_pile
 
 unsigned int draw_cards
 (unsigned int const max_fished_cards,
- struct s_pioche * restrict const pioche,
- struct s_piochees * restrict const piochees);
+ struct s_pool * restrict const pool,
+ struct s_waste * restrict const waste);
 
 unsigned int reset_pool
-(struct s_pioche * restrict const pioche,
- struct s_piochees * restrict const piochees);
+(struct s_pool * restrict const pool,
+ struct s_waste * restrict const waste);
 
 unsigned int pool_still_useful
-(struct s_pioche * restrict const pioche,
- struct s_piochees * restrict const piochees,
+(struct s_pool * restrict const pool,
+ struct s_waste * restrict const waste,
  unsigned int const max_cards_per_draw);
 
 void generate_new_deck();
@@ -96,12 +96,12 @@ unsigned int save_state
  uint8_t * const buffer);
 
 unsigned int load_state
-(struct s_elements_du_jeu * const game_elements,
+(struct s_klondike_elements * const game_elements,
  const uint8_t * const buffer,
- struct s_elements_du_jeu * const temporary_elements);
+ struct s_klondike_elements * const temporary_elements);
 
 unsigned int quick_move
 (struct s_zone * const from_src,
- struct s_elements_du_jeu * const elements);
+ struct s_klondike_elements * const elements);
 
 #endif
