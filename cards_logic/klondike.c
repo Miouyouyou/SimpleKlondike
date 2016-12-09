@@ -245,7 +245,6 @@ unsigned int move_selected_cards_to
     }
 
     selected_zone->placees -= cards_moved;
-    check_if_won();
   }
   /*if (cards_moved) remove_selection(selection);
   else start_selection_from(new_zone, type, selection);*/

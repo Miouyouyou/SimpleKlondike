@@ -19,8 +19,13 @@
 
 #include <myy.h>
 
+#ifdef DEBUG
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
+#else
+#define LOGI(...)
+#define LOGW(...)
+#endif // DEBUG
 
 static struct egl_elements {
   EGLDisplay display;
@@ -90,11 +95,11 @@ static int add_egl_context_to
   window_infos->width = (uint16_t) w;
   window_infos->height = (uint16_t) h;
 
-  LOGW("-----------------------****-------------------\n");
+  /*LOGW("-----------------------****-------------------\n");
   LOGW("Window width : %d - height : %d", w, h);
   LOGW("Window width : %d - height : %d", window_infos->width, window_infos->height);
 
-  LOGW("Window initialised\n");
+  LOGW("Window initialised\n");*/
   return 0;
 }
 
@@ -135,10 +140,11 @@ static int32_t engine_handle_input
   unsigned long tap_time = AMotionEvent_getEventTime(event);
 
   /* TODO : Understand why window width == 3 and window height == 0
-   * when running the following code... */
-  LOGW("WINDOW WIDTH : %d, HEIGHT : %d\n",
+   * when running the following commented code... */
+
+  /*LOGW("WINDOW WIDTH : %d, HEIGHT : %d\n",
        (&current_android_window)->width, (&current_android_window)->height);
-  LOGW("Current android window : %p\n", &current_android_window);
+  LOGW("Current android window : %p\n", &current_android_window);*/
 
   unsigned int
     action = AMotionEvent_getAction(event),
@@ -150,6 +156,7 @@ static int32_t engine_handle_input
     if (tap_time - last_tap > 0x10000000) myy_click(x, y, 1);
     else myy_doubleclick(x, y, 1);
     last_tap = tap_time;
+    //myy_open_website("https://github.com/Miouyouyou/SimpleKlondike");
     break;
   case AMOTION_EVENT_ACTION_MOVE:
     myy_move(x, y);
@@ -165,6 +172,8 @@ static void goto_data_dir(const char* data_dir) {
 
 struct myy_game_state game_state = {0};
 
+/* A hidden global state pointer, how nice ! */
+ANativeActivity * myy_android_activity;
 /**
  * Process the next main command.
  */
@@ -179,17 +188,17 @@ static void engine_handle_cmd
     LOGW("Initialising window");
     if (app->window != NULL)
       add_egl_context_to(app->window, e, &current_android_window);
-    LOGW("WINDOW WIDTH : %d, HEIGHT : %d\n",
-         (&current_android_window)->width, (&current_android_window)->height);
-    LOGW("Current android window : %p\n", &current_android_window);
     myy_init_drawing();
     break;
+  case APP_CMD_WINDOW_RESIZED:
+    LOGW("Resizing !");
+    animating = 0;
+    egl_stop(e);
+    add_egl_context_to(app->window, e, &current_android_window);
+    animating = 1;
   case APP_CMD_RESUME:
     LOGW("Resuming !");
-    /* Terrible idea but wrapping file management calls around
-     * AAssetsManager is a pain... */
-    mkdir("/sdcard/OpenGL", 00777);
-    chdir("/sdcard/OpenGL");
+    myy_android_activity = app->activity;
     myy_resume_state(state);
     animating = 1;
     break;
@@ -213,6 +222,111 @@ static void engine_handle_cmd
 
 }
 
+unsigned int char_string_size(const char * const string) {
+  unsigned int i = 0;
+  for(; string[i] != '\0'; i++);
+  return i;
+}
+
+/* Got to love the JNI taxonomy :
+ *
+ *  _JNIEnv is a structure which first member, 'functions' is defined
+ * as struct const JNINativeInterface * .
+ * However ! JNIEnv is a typedef to struct const JNINativeInterface * !
+ * SO, the first member of _JNIEnv could also be defined as :
+ * JNIEnv functions
+ *
+ *  So JNIEnv and _JNIEnv are not the same !
+ *  JNIEnv != _JNIEnv
+ *  typeof(_JNIEnv->functions) == typeof(JNIEnv)
+ *
+ *  Adding to this, The JVM wants JNIEnv pointer as argument for most
+ * of its helpers methods.
+ * So it basically wants a : struct JNINativeInterface ** identifier
+ *
+ * Why is it so convoluted ? Because Java.
+ */
+struct android_calling_kit {
+  JNIEnv jni_helpers;
+  JNIEnv * env;
+  jobject java_activity;
+  jclass activity_class;
+  JavaVM * java_vm;
+};
+
+struct android_calling_kit prepare_java_call
+(const ANativeActivity * restrict const android_activity) {
+
+  // "This member (clazz) is mis-named. It should really be named
+  //  'activity' instead of 'clazz', since it's a reference to the
+  //  NativeActivity instance created by the system for you."
+  //  (© native_activity.h)
+  jobject activity_java_object = android_activity->clazz;
+
+  JavaVM * vm = android_activity->vm;
+  JNIEnv * jenv;
+  (*vm)->AttachCurrentThread(vm, &jenv, NULL);
+
+  JNIEnv helpers_functions = *jenv;
+
+  jclass activity_java_class =
+    helpers_functions->GetObjectClass(jenv, activity_java_object);
+
+  struct android_calling_kit j = {
+    .jni_helpers = helpers_functions,
+    .env = jenv,
+    .java_activity = activity_java_object,
+    .activity_class = activity_java_class,
+    .java_vm = vm
+  };
+
+  return j;
+}
+void myy_open_website(const char * restrict const url) {
+
+  LOGW("[myy_open_website] !!");
+  struct android_calling_kit android =
+    prepare_java_call(myy_android_activity);
+
+  /* We won't build the Java String from C, but instead pass the
+   * bytes directly in an array, and let the JVM produces a String
+   * from these bytes directly
+   */
+  /* Java Byte[] */
+  unsigned int const url_size = char_string_size(url);
+  // jbyteArray const ... -> void * const ...
+  jbyteArray const url_as_java_byte_array =
+    android.jni_helpers->NewByteArray(android.env, url_size);
+  android.jni_helpers->SetByteArrayRegion(
+    android.env, url_as_java_byte_array, 0, url_size,
+    (const jbyte *) url
+  );
+
+  const char * const java_method_name = "openWebsite";
+  const char * const java_method_signature = "([B)V";
+
+  jmethodID activity_OpenWebsite_meth =
+    android.jni_helpers->GetMethodID(
+      android.env, android.activity_class,
+      java_method_name, java_method_signature
+    );
+
+  if (activity_OpenWebsite_meth != NULL) {
+    LOGW("Opening website..., methodID address : %p\n",
+         activity_OpenWebsite_meth);
+    android.jni_helpers->CallVoidMethod(
+      android.env, android.java_activity,
+      activity_OpenWebsite_meth, url_as_java_byte_array
+    );
+  }
+  else LOGW("You're sure about that method name : %s %s\n",
+            java_method_name, java_method_signature);
+
+  (*android.java_vm)->DetachCurrentThread(android.java_vm);
+
+}
+
+
 /**
  * This is the main entry point of a native application that is using
  * android_native_app_glue.  It runs in its own thread, with its own
@@ -226,9 +340,11 @@ void android_main(struct android_app* app) {
   app->onAppCmd = engine_handle_cmd;
   app->onInputEvent = engine_handle_input;
 
+  myy_android_activity = app->activity;
   myy_assets_manager = app->activity->assetManager;
 
   // loop waiting for stuff to do.
+  LOGW("myy_open_website address : %p\n", myy_open_website);
 
   struct egl_elements* e = &egl;
   while (1) {
@@ -264,7 +380,4 @@ void android_main(struct android_app* app) {
       egl_sync(e);
     }
   }
-}
-
-void open_website(const char * const name) {
 }

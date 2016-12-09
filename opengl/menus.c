@@ -49,7 +49,7 @@ void win_menu_github
 (enum menu_id const menu,
  struct gl_elements * restrict const gl_elements) {
   LOG("[win_menu_github]\n");
-  open_website(GITHUB_URL);
+  myy_open_website(GITHUB_URL);
 }
 void win_menu_restart
 (enum menu_id const menu,
@@ -195,7 +195,7 @@ void prepare_menus_buffers() {
                    MENUS_TEX_WIN_ALPHA_TOP_BOTTOM),
 
         STXYZ_QUAD(-MENUS_WIN_REL_WIDTH, MENUS_WIN_REL_WIDTH,
-                   MENUS_WIN_REL_HEIGHT,MENUS_WIN_REL_OPAQUE_HEIGHT,
+                   MENUS_WIN_REL_OPAQUE_HEIGHT,MENUS_WIN_REL_HEIGHT,
                    MENUS_LAYER,
                    MENUS_TEX_WIN_LEFT, MENUS_TEX_WIN_RIGHT,
                    MENUS_TEX_WIN_ALPHA_TOP_BOTTOM,MENUS_TEX_WIN_TOP),

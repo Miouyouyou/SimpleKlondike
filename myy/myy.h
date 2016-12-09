@@ -27,4 +27,6 @@ void myy_display_initialised(unsigned int width, unsigned int height);
 void myy_init_drawing();
 void myy_cleanup_drawing();
 
+void myy_open_website(const char * restrict const url);
+
 #endif 

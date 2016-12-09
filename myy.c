@@ -358,11 +358,15 @@ void myy_click
       //regen_selection_around(&selection, (struct s_zone *) 0);
     }
     else {
+      LOG("myy_open_website address : %p\n", myy_open_website);
       open_menu(pause_menu, &gl_elements);
     }
 
     LOG("Selection done ? %d\n", selection.done);
-    if (changed_cards) regen_cards_coords(&gl_elements);
+    if (changed_cards) {
+      regen_cards_coords(&gl_elements);
+      check_if_won();
+    }
     regen_and_store_selection_quad(&selection,
                                    gl_elements.n_opaque_points,
                                    gl_elements.sample_selection_address,
@@ -400,6 +404,7 @@ void myy_doubleclick(int x, int y, unsigned int button) {
       gl_elements.sample_selection_address,
       gl_elements.selection_quads_address
     );
+    check_if_won();
   }
   else myy_click(x, y, button);
 }
