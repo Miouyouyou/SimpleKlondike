@@ -30,7 +30,7 @@ static struct egl_elements {
 
 static struct current_window {
   uint16_t width, height;
-} current_window;
+} current_android_window;
 
 AAssetManager *myy_assets_manager;
 
@@ -87,8 +87,12 @@ static int add_egl_context_to
 
   myy_display_initialised(w, h);
 
-  window_infos->width = w;
-  window_infos->height = h;
+  window_infos->width = (uint16_t) w;
+  window_infos->height = (uint16_t) h;
+
+  LOGW("-----------------------****-------------------\n");
+  LOGW("Window width : %d - height : %d", w, h);
+  LOGW("Window width : %d - height : %d", window_infos->width, window_infos->height);
 
   LOGW("Window initialised\n");
   return 0;
@@ -130,10 +134,16 @@ static int32_t engine_handle_input
 
   unsigned long tap_time = AMotionEvent_getEventTime(event);
 
+  /* TODO : Understand why window width == 3 and window height == 0
+   * when running the following code... */
+  LOGW("WINDOW WIDTH : %d, HEIGHT : %d\n",
+       (&current_android_window)->width, (&current_android_window)->height);
+  LOGW("Current android window : %p\n", &current_android_window);
+
   unsigned int
     action = AMotionEvent_getAction(event),
     x = AMotionEvent_getX(event, 0),
-    y = current_window.height - AMotionEvent_getY(event, 0);
+    y = current_android_window.height - (int) AMotionEvent_getY(event, 0);
 
   switch(action) {
   case AMOTION_EVENT_ACTION_DOWN:
@@ -168,7 +178,10 @@ static void engine_handle_cmd
     LOGW("======================================");
     LOGW("Initialising window");
     if (app->window != NULL)
-      add_egl_context_to(app->window, e, &current_window);
+      add_egl_context_to(app->window, e, &current_android_window);
+    LOGW("WINDOW WIDTH : %d, HEIGHT : %d\n",
+         (&current_android_window)->width, (&current_android_window)->height);
+    LOGW("Current android window : %p\n", &current_android_window);
     myy_init_drawing();
     break;
   case APP_CMD_RESUME:
@@ -251,4 +264,7 @@ void android_main(struct android_app* app) {
       egl_sync(e);
     }
   }
+}
+
+void open_website(const char * const name) {
 }

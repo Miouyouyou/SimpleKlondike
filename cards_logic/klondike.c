@@ -157,18 +157,22 @@ static void reset_stacks_trick
 void klondike_reset_game_elements
 (struct s_elements_du_jeu * const game_elements) {
   game_elements->pioche.placees = 0;
-  memset(game_elements->pioche.cartes, 0, REMAINING_DECK);
+  memset(game_elements->pioche.cartes, 0,
+         game_elements->pioche.max);
   game_elements->piochees.placees = 0;
-  memset(game_elements->piochees.cartes, 0, REMAINING_DECK);
+  memset(game_elements->piochees.cartes, 0,
+         game_elements->piochees.max);
   for (unsigned int s = 0; s < 4; s++) {
     game_elements->tas[s].placees = 0;
-    memset(game_elements->tas[s].cartes, 0, MAX_CARDS_PER_STACK);
+    memset(game_elements->tas[s].cartes, 0,
+           game_elements->tas[s].max);
   }
   reset_stacks_trick(game_elements);
 
   for (unsigned int p = 0; p < 7; p++) {
     game_elements->suites[p].placees = 0;
-    memset(game_elements->suites[p].cartes, 0, MAX_CARDS_PER_PILE);
+    memset(game_elements->suites[p].cartes, 0,
+           game_elements->suites[p].max);
   }
 }
 
@@ -198,10 +202,12 @@ void distribute_deck
 }
 
 void check_if_won() {
-  int win_check = (elements_du_jeu.tas[0].placees == MAX_CARDS_PER_STACK &&
-                   elements_du_jeu.tas[1].placees == MAX_CARDS_PER_STACK &&
-                   elements_du_jeu.tas[2].placees == MAX_CARDS_PER_STACK &&
-                   elements_du_jeu.tas[3].placees == MAX_CARDS_PER_STACK);
+  int win_check = (
+    elements_du_jeu.tas[0].placees == elements_du_jeu.tas[0].max &&
+    elements_du_jeu.tas[1].placees == elements_du_jeu.tas[1].max &&
+    elements_du_jeu.tas[2].placees == elements_du_jeu.tas[2].max &&
+    elements_du_jeu.tas[3].placees == elements_du_jeu.tas[3].max
+  );
   if (win_check) game_won();
 }
 
@@ -350,8 +356,9 @@ unsigned int add_card_to_pile
 }
 
 unsigned int draw_cards
-(unsigned int max_fished_cards, struct s_pioche *pioche,
- struct s_piochees *piochees) {
+(unsigned int const max_fished_cards,
+ struct s_pioche * restrict const pioche,
+ struct s_piochees * restrict const piochees) {
 
   unsigned int cards_in_pool = pioche->placees;
 
@@ -374,7 +381,8 @@ unsigned int draw_cards
 }
 
 unsigned int reset_pool
-(struct s_pioche* const pioche, struct s_piochees* const piochees) {
+(struct s_pioche * restrict const pioche,
+ struct s_piochees * restrict const piochees) {
   unsigned int cards_in_pool  = pioche->placees,
                cards_in_waste = piochees->placees;
   carte
@@ -385,11 +393,17 @@ unsigned int reset_pool
   while(w_i--) pool_cards[p_i++] = waste_cards[w_i];
 
   pioche->placees = p_i;
-  pioche->max = p_i; // Not the best idea...
-  piochees->max = p_i; // Not the best idea...
   piochees->placees = 0;
 
   return p_i;
+}
+
+unsigned int pool_still_useful
+(struct s_pioche * restrict const pioche,
+ struct s_piochees * restrict const piochees,
+ unsigned int const max_cards_per_draw) {
+  return (pioche->placees > 0 ||
+          piochees->placees > max_cards_per_draw);
 }
 
 /* Save data format :

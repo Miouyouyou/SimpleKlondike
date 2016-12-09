@@ -1,0 +1,11 @@
+<!-- The result of this SVG was exported using a iewer plugin for Atom
+      as Inkscape cannot handle this symbol correctly... -->
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="87" height="135" style="font-family:'Roboto';background-color:rgba(34,51,119,0);">
+  <rect width="87" height="135" rx="8" ry="8"
+  style="fill:#237;stroke-width:0;stroke:rgb(255,255,255)" />
+  <rect x="3" y="3" width="81" height="129" rx="5" ry="5"
+  style="fill:transparent;stroke-width:2;stroke:rgb(255,255,255);" />
+  <text x="9" y="83" style="fill:white;font-size:50pt;stroke:#125;stroke-width:1.1px">⭀</text>
+  <!-- Header -->
+
+</svg>

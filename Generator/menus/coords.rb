@@ -56,3 +56,18 @@ WindowCoords.of(buttons: win_buttons, in_window: [512, 324],
                 displayed_on: [1920, 1080], scaling: 2,
                 denormalise_to: :GLbyte)
 
+
+# Used for the last hour bad hack
+pause_buttons = {
+  first_square:  {x: [1216, 1244], y: [637, 643]},
+  second_square: {x: [1216, 1244], y: [649, 655]},
+  thrid_square:  {x: [1216, 1244], y: [661, 667]}
+}
+
+WindowCoords.of(buttons: pause_buttons, in_window: [1280, 720],
+	        displayed_on: [1280, 720], scaling: 1,
+                denormalise_to: :GLbyte)
+WindowCoords.of(buttons: pause_buttons, in_window: [1280, 720],
+	        displayed_on: [1280, 720], scaling: 1,
+                denormalise_to: :GLfloat)
+

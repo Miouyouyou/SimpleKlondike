@@ -36,10 +36,6 @@ extern carte base_deck[];
 extern carte deck[];
 extern uint8_t scratch[];
 
-void open_website(const char * const name) {
-  LOG("Opening %s\n", name);
-}
-
 void no_action() {}
 
 void myy_display_initialised
@@ -179,6 +175,7 @@ void myy_draw() {
 
   //glClearColor(0.2f,0.6f,0.3f,1.0f);
 
+  draw_pause_button(0, &gl_elements);
   gl_elements.draw_menu(
     gl_elements.current_menu_id, &gl_elements, draw_opaque
   );
@@ -308,21 +305,20 @@ extern struct menu_actions menus_actions;
 void myy_click
 (int x, int y, unsigned int button) {
 
+
   struct byte_point_2D norm_coords =
     normalise(x, y, gl_elements.width, gl_elements.height);
 
+  LOG("[myy_click]\n  x: %d - y: %d -- normalised: %d, %d\n",
+      x, y, norm_coords.x, norm_coords.y);
   if (!gl_elements.displaying_a_menu) {
     enum hitbox_zones h_z =
       determine_clicked_zone(norm_coords.x, norm_coords.y);
 
-    LOG("norm_coords.x : %d - norm_coords.y : %d - h_z : %d\n",
-        norm_coords.x, norm_coords.y, h_z);
     enum zones z_t = determine_zone_type(h_z);
 
-    LOG("Hitbox : %d\n", h_z);
-
     unsigned int changed_cards = 0;
-    if (h_z != hitbox_unknown) {
+    if (h_z < hitbox_pause_hack) {
       struct s_zone* const clicked_zone = gl_elements.zones_du_jeu[h_z];
       if (z_t == zone_deck) {
         struct s_pioche * const pioche = (struct s_pioche *) clicked_zone;
@@ -330,10 +326,13 @@ void myy_click
           (struct s_piochees *) gl_elements.zones_du_jeu[hitbox_piochees];
         LOG("%p == %p ?\n",
             piochees, gl_elements.zones_du_jeu[hitbox_piochees]);
-        if (pioche->max) {
+        if (pool_still_useful(pioche, piochees, MAX_CARDS_PER_DRAW)) {
           if (pioche->placees)
-            draw_cards(MAX_CARDS_IN_WASTE, pioche, piochees);
-          else reset_pool(pioche, piochees);
+            draw_cards(MAX_CARDS_PER_DRAW, pioche, piochees);
+          else {
+            reset_pool(pioche, piochees);
+            remove_selection(&selection);
+          }
           changed_cards = 1;
         }
       }
@@ -354,9 +353,12 @@ void myy_click
         }
       }
     }
-    else {
+    else if (h_z == hitbox_unknown) {
       remove_selection(&selection);
       //regen_selection_around(&selection, (struct s_zone *) 0);
+    }
+    else {
+      open_menu(pause_menu, &gl_elements);
     }
 
     LOG("Selection done ? %d\n", selection.done);
@@ -390,6 +392,7 @@ void myy_doubleclick(int x, int y, unsigned int button) {
   if (!displaying_a_menu &&
       (z_t == zone_pile || z_t == zone_waste) &&
       quick_move(gl_elements.zones_du_jeu[h_z], &elements_du_jeu)) {
+    remove_selection(&selection);
     regen_cards_coords(&gl_elements);
     regen_and_store_selection_quad(
       &selection,

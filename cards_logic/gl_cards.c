@@ -118,13 +118,13 @@ struct GLSelection gl_selection_parts = {
   )
 };
 
-struct hitbox zones_hitboxes[13] = {
+struct hitbox zones_hitboxes[hitbox_unknown] = {
   {CARD_HITBOX(CARD_LEFT_FROM(POS_DECK_X), CARD_RIGHT_FROM(POS_DECK_X),
                CARD_TOP_FROM(POS_UPPER_ELEMENTS),
                CARD_BOTTOM_FROM(POS_UPPER_ELEMENTS)
                )},
   {CARD_HITBOX(CARD_LEFT_FROM(POS_WASTE_X),
-               CARD_RIGHT_FROM(POS_WASTE_X)+MAX_CARDS_IN_WASTE*POS_WASTE_OFFSET_X,
+               CARD_RIGHT_FROM(POS_WASTE_X)+MAX_CARDS_PER_DRAW*POS_WASTE_OFFSET_X,
                CARD_TOP_FROM(POS_UPPER_ELEMENTS),
                CARD_BOTTOM_FROM(POS_UPPER_ELEMENTS)
                )},
@@ -175,7 +175,9 @@ struct hitbox zones_hitboxes[13] = {
   {CARD_HITBOX(CARD_LEFT_FROM(POS_SUIT_7),
                CARD_RIGHT_FROM(POS_SUIT_7),
                CARD_TOP_FROM(POS_LOWER_ELEMENTS),
-               128)}
+               128)},
+  // Bad button hack
+  {.range = {{.x = 114, .y = -98}, {.x = 120, .y = -108}}}
 };
 
 extern struct s_elements_du_jeu elements_du_jeu; // klondike.c
@@ -223,15 +225,16 @@ void game_won() {
   open_menu(win_menu, &gl_elements);
 }
 
-void basic_klondike_restart() {
+void basic_klondike_restart
+(struct gl_elements * restrict const gl_elements) {
   myy_generate_new_state();
-  regen_cards_coords(&gl_elements);
+  regen_cards_coords(gl_elements);
   regen_and_store_selection_quad(
-    &selection, gl_elements.n_opaque_points,
-    gl_elements.sample_selection_address,
-    gl_elements.selection_quads_address
+    &selection, gl_elements->n_opaque_points,
+    gl_elements->sample_selection_address,
+    gl_elements->selection_quads_address
   );
-  close_all_menus(&gl_elements);
+  close_all_menus(gl_elements);
 }
 
 
@@ -242,8 +245,8 @@ void basic_klondike_restart() {
 static unsigned int generate_card_quads
 (const GLushort s_offset, const GLushort t_offset,
  const GLshort x_offset, const GLshort y_offset,
- const GLshort z_offset, GLCard *mdl,
- const unsigned int n_mdl, GLCard *cpy) {
+ const GLshort z_offset, GLCard * restrict mdl,
+ const unsigned int n_mdl, GLCard * restrict cpy) {
 
   for (unsigned int parts = 0; parts < n_mdl; parts++) {
     for (unsigned int i = 0; i < two_triangles_corners; i++) {
@@ -260,8 +263,11 @@ static unsigned int generate_card_quads
 }
 
 static unsigned int generate_card
-(carte *card, int current_card_x_offset, int current_card_y_offset,
- int z_layer, GLCard *models, unsigned int quads, GLCard *cpy) {
+(carte * restrict const card,
+ int const current_card_x_offset, int const current_card_y_offset,
+ int const z_layer,
+ GLCard * restrict const models, unsigned int const quads,
+ GLCard * restrict const cpy) {
 
   int8_t card_value = card->valeur;
   uint16_t current_card_s_offset;
@@ -284,9 +290,12 @@ static unsigned int generate_card
 }
 
 static unsigned int generate_opaque_parts
-(struct s_zone *zone, const unsigned int from_card_c,
- const unsigned int to_card_c, GLCard *models,
- const unsigned int quads, GLCard *cpy) {
+(struct s_zone * restrict const zone,
+ unsigned int const from_card_c,
+ unsigned int const to_card_c,
+ GLCard * restrict const models,
+ unsigned int const quads,
+ GLCard * restrict cpy) {
   /* Traiter toutes les cartes placées et générer des coordonées dans
      GLCard */
 
@@ -318,9 +327,12 @@ static unsigned int generate_opaque_parts
 }
 
 static unsigned int generate_transparent_parts
-(struct s_zone *zone, const unsigned int from_card_c,
- const unsigned int to_card_c, GLCard *models,
- const unsigned int quads, GLCard *cpy) {
+(struct s_zone * restrict const zone,
+ unsigned int const from_card_c,
+ unsigned int const to_card_c,
+ GLCard * restrict const models,
+ unsigned int const quads,
+ GLCard * restrict cpy) {
   /* Traiter toutes les cartes placées et générer des coordonées dans
      GLCard */
 
@@ -354,67 +366,10 @@ static unsigned int generate_transparent_parts
 
 }
 
-#define GENERATOR_SIGNATURE (struct s_zone *zone, \
-                             const unsigned int from_card_c, \
-                             const unsigned int to_card_c, \
-                             GLCard *models, \
-                             const unsigned int quads, \
-                             GLCard *cpy)
-
-static unsigned int generate_stack_parts
-(unsigned int (*generator_func)GENERATOR_SIGNATURE,
-  struct s_zone *zone, GLCard *models, unsigned int quads, GLCard *cpy) {
-  return generate_card(&zone->cartes[zone->placees-1], zone->position.x,
-                       zone->position.y, 0, models, quads, cpy);
-}
-
-static unsigned int generate_pile_parts
-(unsigned int (*generator_func)GENERATOR_SIGNATURE,
- struct s_zone *zone, GLCard *models, unsigned int quads, GLCard *cpy) {
-  unsigned int cards_in_pile = zone->placees;
-  if (cards_in_pile)
-    return generator_func(zone, 0, zone->placees-1, models, quads, cpy);
-  else return 0;
-}
-
-static unsigned int generate_waste_parts
-(unsigned int (*generator_func)GENERATOR_SIGNATURE,
- struct s_zone *zone, GLCard *models, unsigned int quads, GLCard *cpy) {
-  unsigned int cards_in_waste = zone->placees;
-
-  if (cards_in_waste) {
-
-    unsigned int
-      end_i = (cards_in_waste > 0 ? cards_in_waste - 1 : 0),
-      start_i = end_i >= MAX_CARDS_IN_WASTE ? end_i - MAX_CARDS_IN_WASTE + 1
-                                            : 0;
-
-    return generator_func(zone, start_i, end_i, models, quads, cpy);
-  }
-  else return 0;
-}
-
-static unsigned int generate_pool_parts
-(unsigned int (*generator_func)GENERATOR_SIGNATURE,
- struct s_zone *pool, GLCard *models, unsigned int n_models, GLCard *cpy) {
-  const GLushort
-    s_offset = 14 * CARD_TEX_S_STRIDE,
-    t_offset = (0 + (pool->placees == 0) + (pool->max == 0)) * CARD_TEX_T_STRIDE;
-  const GLshort
-    x_offset = pool->position.x,
-    y_offset = pool->position.y;
-
-  return generate_card_quads(s_offset, t_offset, x_offset, y_offset, 0,
-                             models, n_models, cpy);
-}
-
-
-
-
-
 void generate_horizontal_selection_around
 (struct s_selection *selection,
- struct GLSelection *mdl, struct GLSelection *cpy) {
+ struct GLSelection * restrict const mdl,
+ struct GLSelection * restrict const cpy) {
 
   if (selection->done) {
     struct s_zone *selected_zone = selection->zone;
@@ -425,7 +380,7 @@ void generate_horizontal_selection_around
         first_y_offset +
         selected_zone->cards_offsets.y * (selected_zone->placees - 1) * 258,
       s_offset = 14 * CARD_TEX_S_STRIDE,
-      t_offset = 1 * CARD_TEX_T_STRIDE;
+      t_offset = 3 * CARD_TEX_T_STRIDE;
     GLshort offsets[2] = { first_y_offset, second_y_offset };
     for (int i = 0; i < two_triangles_corners; i ++) {
       cpy->opaque.points[i].s = mdl->opaque.points[i].s + s_offset;
@@ -439,28 +394,110 @@ void generate_horizontal_selection_around
       cpy->top.points[i].t = mdl->top.points[i].t + t_offset;
       cpy->top.points[i].x = mdl->top.points[i].x + first_x_offset;
       cpy->top.points[i].y = mdl->top.points[i].y + first_y_offset;
-      cpy->top.points[i].z = mdl->opaque.points[i].z;
+      cpy->top.points[i].z = mdl->top.points[i].z;
     }
     for (int i = 0; i < two_triangles_corners; i ++) {
       cpy->bottom.points[i].s = mdl->bottom.points[i].s + s_offset;
       cpy->bottom.points[i].t = mdl->bottom.points[i].t + t_offset;
       cpy->bottom.points[i].x = mdl->bottom.points[i].x + first_x_offset;
       cpy->bottom.points[i].y = mdl->bottom.points[i].y + second_y_offset;
-      cpy->bottom.points[i].z = mdl->opaque.points[i].z;
+      cpy->bottom.points[i].z = mdl->bottom.points[i].z;
     }
   }
   else memset(cpy, 0, sizeof(struct GLSelection));
 
 }
 
+#define GENERATOR_SIGNATURE \
+ struct s_zone * restrict const zone, \
+ unsigned int const from_card_c, \
+ unsigned int const to_card_c, \
+ GLCard * restrict const models, \
+ unsigned int const quads, \
+ GLCard * restrict cpy
+
+static unsigned int generate_stack_parts
+(unsigned int (*generator_func)(GENERATOR_SIGNATURE),
+  struct s_zone * const zone,
+  GLCard * restrict const models, unsigned int const quads,
+  GLCard * restrict const cpy,
+  struct s_zone ** restrict const zones) {
+  return generate_card(&zone->cartes[zone->placees-1], zone->position.x,
+                       zone->position.y, 0, models, quads, cpy);
+}
+
+static unsigned int generate_pile_parts
+(unsigned int (*generator_func)(GENERATOR_SIGNATURE),
+ struct s_zone * restrict const zone,
+ GLCard * restrict const models, unsigned int const quads,
+ GLCard * restrict const cpy,
+ struct s_zone ** restrict const zones) {
+  unsigned int cards_in_pile = zone->placees;
+  if (cards_in_pile)
+    return generator_func(zone, 0, zone->placees-1, models, quads, cpy);
+  else return 0;
+}
+
+static unsigned int generate_waste_parts
+(unsigned int (*generator_func)(GENERATOR_SIGNATURE),
+ struct s_zone * restrict const zone,
+ GLCard * restrict const models, unsigned int const quads,
+ GLCard * restrict const cpy,
+ struct s_zone ** restrict const zones) {
+  unsigned int cards_in_waste = zone->placees;
+
+  if (cards_in_waste) {
+
+    unsigned int
+      end_i = (cards_in_waste > 0 ? cards_in_waste - 1 : 0),
+      start_i =
+        end_i >= MAX_CARDS_PER_DRAW ? end_i - MAX_CARDS_PER_DRAW + 1
+                                    : 0;
+
+    return generator_func(zone, start_i, end_i, models, quads, cpy);
+  }
+  else return 0;
+}
+
+static unsigned int generate_pool_parts
+(unsigned int (*generator_func)(GENERATOR_SIGNATURE),
+ struct s_zone * restrict const pool,
+ GLCard * restrict const models, unsigned int const quads,
+ GLCard * restrict const cpy,
+ struct s_zone ** restrict const zones) {
+
+  struct s_piochees * waste = zones[e_waste];
+  unsigned int useful_pool =
+    pool_still_useful((struct s_pioche *) pool, waste,
+                      MAX_CARDS_PER_DRAW);
+
+  const GLushort
+    s_offset = 14 * CARD_TEX_S_STRIDE,
+    t_offset = (0 + (pool->placees == 0) + (useful_pool == 0))
+                * CARD_TEX_T_STRIDE;
+  const GLshort
+    x_offset = pool->position.x,
+    y_offset = pool->position.y;
+
+  return generate_card_quads(s_offset, t_offset, x_offset, y_offset, 0,
+                             models, quads, cpy);
+}
+
 struct generated_parts generer_coordonnees_elements_du_jeu
-(struct s_zone **zones, GLCard *transparent_coords,
- GLCard *transparent_models_parts, GLCard *opaque_coords,
- GLCard *opaque_model_parts) {
+(struct s_zone ** restrict const zones,
+ GLCard * restrict transparent_coords,
+ GLCard * restrict const transparent_models_parts,
+ GLCard * restrict opaque_coords,
+ GLCard * restrict const opaque_model_parts) {
 
   unsigned int (*elements_generators[])(
-   unsigned int (*generator)GENERATOR_SIGNATURE, struct s_zone *zone,
-   GLCard *models, unsigned int n_models, GLCard *cpy) = {
+    unsigned int (*generator)(GENERATOR_SIGNATURE),
+    struct s_zone * restrict const zone,
+    GLCard * restrict const models, unsigned int quads,
+    GLCard * restrict const cpy,
+    struct s_zone ** const zones
+    // struct s_zone ** zones is only useful for the pool generator...
+  ) = {
     generate_pool_parts, generate_waste_parts,
     generate_stack_parts, generate_stack_parts, generate_stack_parts,
     generate_stack_parts, generate_pile_parts, generate_pile_parts,
@@ -478,7 +515,7 @@ struct generated_parts generer_coordonnees_elements_du_jeu
   for (; n < n_game_elements; n++) {
     generated_quads = elements_generators[n](
       generate_transparent_parts, zones[n], transparent_models_parts,
-      2, transparent_coords
+      2, transparent_coords, zones
     );
     transparent_coords += generated_quads;
     total_transparent_quads += generated_quads;
@@ -486,7 +523,7 @@ struct generated_parts generer_coordonnees_elements_du_jeu
   while(n--) {
     generated_quads = elements_generators[n](
       generate_opaque_parts, zones[n], opaque_model_parts,
-      1, opaque_coords
+      1, opaque_coords, zones
     );
     opaque_coords += generated_quads;
     total_opaque_quads += generated_quads;

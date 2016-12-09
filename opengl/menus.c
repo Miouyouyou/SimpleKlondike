@@ -168,12 +168,12 @@ void prepare_menus_buffers() {
                    MENUS_TEX_PAUSE_ALPHA_TOP_BOTTOM),
 
         STXYZ_QUAD(-MENUS_PAUSE_REL_WIDTH, MENUS_PAUSE_REL_WIDTH,
-                   MENUS_PAUSE_REL_HEIGHT,
                    MENUS_PAUSE_REL_OPAQUE_HEIGHT,
+                   MENUS_PAUSE_REL_HEIGHT,
                    MENUS_LAYER,
                    MENUS_TEX_PAUSE_LEFT, MENUS_TEX_PAUSE_RIGHT,
-                   MENUS_TEX_PAUSE_TOP,
-                   MENUS_TEX_PAUSE_ALPHA_TOP_BOTTOM),
+                   MENUS_TEX_PAUSE_ALPHA_TOP_BOTTOM,
+                   MENUS_TEX_PAUSE_TOP),
 
         STXYZ_QUAD(-MENUS_PAUSE_REL_WIDTH, MENUS_PAUSE_REL_WIDTH,
                    -MENUS_PAUSE_REL_HEIGHT,
@@ -209,11 +209,48 @@ void prepare_menus_buffers() {
     },
   };
 
+  /* Last minute hack */
+  two_layered_tris_quad pause_button[3] = {
+    STXYZ_QUAD(0.9f, 0.94375f, -0.786111f, -0.769444f, 0.20f,
+               0.540f, 0.542f, 0.1913f, 0.1913f),
+    STXYZ_QUAD(0.9f, 0.94375f, -0.81944f, -0.802777f, 0.20f,
+               0.540f, 0.542f, 0.1913f, 0.1913f),
+    STXYZ_QUAD(0.9f, 0.94375f, -0.852777f, -0.836111f, 0.20f,
+               0.540f, 0.542f, 0.1913f, 0.1913f)
+  };
+
   if (!windows_buffer) glGenBuffers(1, &windows_buffer);
 
   glBindBuffer(GL_ARRAY_BUFFER, windows_buffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(struct dumb_window)*n_menus,
-               windows, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               // This last minute hack introduces this offset
+               sizeof(two_layered_tris_quad) * 3 +
+               sizeof(struct dumb_window)*n_menus,
+               NULL, GL_STATIC_DRAW);
+  glBufferSubData(GL_ARRAY_BUFFER,
+                  0, sizeof(two_layered_tris_quad) * 3,
+                  pause_button);
+  glBufferSubData(GL_ARRAY_BUFFER,
+                 sizeof(two_layered_tris_quad) * 3,
+                 sizeof(struct dumb_window)*n_menus,
+                 windows);
+}
+
+void draw_pause_button
+(unsigned int useless,
+ struct gl_elements * const gl_elements) {
+  glBindBuffer(GL_ARRAY_BUFFER, windows_buffer);
+  glUniform1i(gl_elements->uniforms[unif_background], 2);
+
+  glVertexAttribPointer(attr_xyz, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(struct textured_point_3D),
+                        (const void *)
+                        (offsetof(struct textured_point_3D, x)));
+  glVertexAttribPointer(attr_st, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(struct textured_point_3D),
+                        (const void *)
+                        (offsetof(struct textured_point_3D, s)));
+  glDrawArrays(GL_TRIANGLES, 0, two_triangles_corners*3);
 }
 
 void draw_menu
@@ -221,32 +258,26 @@ void draw_menu
  struct gl_elements * const gl_elements,
  enum draw_modes const draw_mode) {
 
-  const unsigned int buffer_offset = sizeof(struct dumb_window)*menu;
+  const unsigned int buffer_offset =
+    sizeof(two_layered_tris_quad) * 3 + // <- Last minute hack...
+    sizeof(struct dumb_window)*menu;
 
   glBindBuffer(GL_ARRAY_BUFFER, windows_buffer);
   glUniform1i(gl_elements->uniforms[unif_background], 2);
 
+  glVertexAttribPointer(attr_xyz, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(struct textured_point_3D),
+                        (const void *) buffer_offset);
+  glVertexAttribPointer(attr_st, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(struct textured_point_3D),
+                        (const void *)
+                        (buffer_offset+offsetof(struct textured_point_3D, s)));
   switch(draw_mode) {
   case draw_opaque:
-    glVertexAttribPointer(attr_xyz, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(struct textured_point_3D),
-                          (const void *) buffer_offset);
-    glVertexAttribPointer(attr_st, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(struct textured_point_3D),
-                          (const void *)
-                          (buffer_offset+offsetof(struct textured_point_3D, s)));
     glDrawArrays(GL_TRIANGLES, 0, two_triangles_corners);
     break;
   case draw_blended:
-    glVertexAttribPointer(attr_xyz, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(struct textured_point_3D),
-                          (const void *) buffer_offset);
-    glVertexAttribPointer(attr_st, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(struct textured_point_3D),
-                          (const void *)
-                          buffer_offset+offsetof(struct textured_point_3D, s));
-    glDrawArrays(GL_TRIANGLES, two_triangles_corners,
-                 two_triangles_corners*2);
+    glDrawArrays(GL_TRIANGLES, two_triangles_corners, two_triangles_corners*2);
     break;
   }
 }

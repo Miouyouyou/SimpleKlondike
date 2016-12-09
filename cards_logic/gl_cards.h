@@ -39,9 +39,11 @@ struct generated_parts {
 };
 
 struct generated_parts generer_coordonnees_elements_du_jeu
-(struct s_zone **zones, GLCard *transparent_coords,
- GLCard *transparent_models_parts, GLCard *opaque_coords,
- GLCard *opaque_model_parts);
+(struct s_zone ** restrict const zones,
+ GLCard * restrict transparent_coords,
+ GLCard * restrict const transparent_models_parts,
+ GLCard * restrict opaque_coords,
+ GLCard * restrict const opaque_model_parts);
 void stocker_coordonnees_elements_du_jeu(GLCard *cards_coords,
   unsigned int n_cards, GLCard *parts_coords, unsigned int n_parts,
   BUS_two_tris_3D_quad *background);
@@ -49,7 +51,8 @@ void regen_cards_coords();
 
 void generate_horizontal_selection_around
 (struct s_selection *selection,
- struct GLSelection *mdl, struct GLSelection *cpy);
+ struct GLSelection * restrict const mdl,
+ struct GLSelection * restrict const cpy);
 void print_selection(struct GLSelection *selection);
 
 void regen_and_store_selection_quad
@@ -64,7 +67,7 @@ enum hitbox_zones {
   hitbox_pioche, hitbox_piochees,
   hitbox_stack_spade, hitbox_stack_heart, hitbox_stack_diamond, hitbox_stack_club,
   hitbox_suite1, hitbox_suite2, hitbox_suite3, hitbox_suite4, hitbox_suite5,
-  hitbox_suite6, hitbox_suite7, hitbox_unknown
+  hitbox_suite6, hitbox_suite7, hitbox_pause_hack, hitbox_unknown
 };
 
 enum hitbox_zones determine_clicked_zone(int8_t glx, int8_t gly);

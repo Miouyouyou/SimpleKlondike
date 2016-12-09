@@ -1,4 +1,4 @@
-#include "myy.h"
+#include <myy.h>
 #include "init_window.h"
 
 int main() {
@@ -17,3 +17,5 @@ int main() {
   myy_cleanup_drawing();
 
 }
+
+void open_website(const char * const name) {}

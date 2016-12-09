@@ -10,7 +10,7 @@
 #define MAX_CARDS_PER_PILE 19 // Simple hard limit : 6 🂠 + Full suite (13 🃟)
 #define MAX_CARDS_PER_STACK 14 // +1 : Stack holder as a Card trick
 #define REMAINING_DECK 24
-#define MAX_CARDS_IN_WASTE 1
+#define MAX_CARDS_PER_DRAW 1
 #define PILES 7
 #define VALID_ON_PILE(first_card, second_card) \
   (DIFFERENT_COLOR(first_card,second_card)) && \
@@ -75,15 +75,19 @@ unsigned int add_card_to_stack
 unsigned int add_card_to_pile
 (struct s_zone* , struct s_zone*, struct s_selection* );
 
-void put_waste_back_in_pool
-(struct s_pioche *pioche, struct s_piochees *piochees);
-
 unsigned int draw_cards
-(unsigned int max_fished_cards, struct s_pioche *pioche,
- struct s_piochees *piochees);
+(unsigned int const max_fished_cards,
+ struct s_pioche * restrict const pioche,
+ struct s_piochees * restrict const piochees);
 
 unsigned int reset_pool
-(struct s_pioche* pioche, struct s_piochees* piochees);
+(struct s_pioche * restrict const pioche,
+ struct s_piochees * restrict const piochees);
+
+unsigned int pool_still_useful
+(struct s_pioche * restrict const pioche,
+ struct s_piochees * restrict const piochees,
+ unsigned int const max_cards_per_draw);
 
 void generate_new_deck();
 

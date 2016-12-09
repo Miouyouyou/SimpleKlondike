@@ -6,8 +6,6 @@
 #include <EGL/egl.h>
 #include <EGL/eglplatform.h>
 
-#include "../myy.h"
-
 /* eglplatform.h implicitly include X11 libraries */
 static Atom destroy;
 

@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#if defined(DEBUG)
 #if defined(__ANDROID__)
 
 #include <android/log.h>
@@ -16,5 +17,8 @@
 #define LOG_ERRNO(...)  fprintf(stderr, "Error : %s\n", strerror(errno)); fprintf(stderr, __VA_ARGS__)
 
 #endif
-
+#else // DEBUG
+#define LOG(...)
+#define LOG_ERRNO(...)
+#endif // DEBUG
 #endif

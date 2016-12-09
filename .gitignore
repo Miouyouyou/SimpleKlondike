@@ -10,12 +10,12 @@ Program
 *.includes
 *.creator*
 /*.config
-android/apk/app/build/*
 /test-*
 *.save
-android/apk/.gradle
-android/apk/app/src/main/assets/shaders
-android/apk/app/src/main/assets/textures
+myy/platforms/android/apk/app/build/*
+myy/platforms/android/apk/.gradle
+myy/platforms/android/apk/app/src/main/assets/shaders
+myy/platforms/android/apk/app/src/main/assets/textures
 Generator/*/*.png
 Generator/*/*.svg
 Generator/*/*.bmp

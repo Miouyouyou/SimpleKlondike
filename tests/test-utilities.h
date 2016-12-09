@@ -94,7 +94,7 @@ struct s_piochees* utl_create_waste(carte *cartes, unsigned int placees) {
   GENERATOR_HEADER("waste");
 
   struct s_piochees* waste = malloc(sizeof(struct s_piochees));
-  utl_prepare_zone((struct s_zone *) waste, cartes, placees, MAX_CARDS_IN_WASTE);
+  utl_prepare_zone((struct s_zone *) waste, cartes, placees, MAX_CARDS_PER_DRAW);
   return waste;
 }
 
@@ -219,7 +219,6 @@ void assert_pool_cards
   LOG("Checking pool cards... %2d (%2d) cards (max : %2d)\n",
        n_cards, pool->placees, max);
   assert_zone_cards((struct s_zone *) pool, cards, n_cards);
-  assert(pool->max == max);
 }
 void assert_pile_cards(struct s_suites *pile, carte *cards, unsigned int n_cards) {
   LOG("Checking pile with... %2d (%2d) cards\n", n_cards, pile->placees);
@@ -287,3 +286,5 @@ unsigned int utl_move_from_stack_to_pile
     selection
   );
 }
+
+void game_won() {}

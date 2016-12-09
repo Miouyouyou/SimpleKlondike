@@ -104,5 +104,9 @@ void draw_menu
  enum draw_modes const draw_mode);
 void destroy_menu_buffers();
 
+// Last minute hack
+void draw_pause_button
+(unsigned int useless,
+ struct gl_elements * const gl_elements);
 
 #endif

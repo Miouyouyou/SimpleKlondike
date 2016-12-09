@@ -1,110 +1,83 @@
-OBJS = base_gl.o gl_cards.o basics.o klondike.o menus.o myy.o
-X11_OBJS = X11/main.o X11/init_window.o X11/file.o
-X11_LDFLAGS = -lX11 -lEGL
+O := .build
+
 CC = clang
-CFLAGS = -march=native -fPIC -g3 -fuse-ld=gold
-INCLUDE_DIRS = -I.
+ifeq ($(origin CFLAGS), undefined)
+  CFLAGS = -O3 -march=native
+endif
+CFLAGS += -fPIC -fuse-ld=gold -DDEBUG
+INCLUDE_DIRS = -Imyy -I.
 LDFLAGS = -lGLESv2
-CCC = $(CC) $(CFLAGS) $(INCLUDE_DIRS)
+CCC := $(CC) $(CFLAGS) $(INCLUDE_DIRS)
 
-LIBRARY = libmyy.so
+X11_LDFLAGS = -lX11 -lEGL
+X11_SOURCES = $(shell find ./myy/platforms/X11 -name '*.c')
 
-.PHONY: all
-all: x11
-
-.PHONY: x11
-x11: $(OBJS) $(X11_OBJS)
-	$(CCC) -o Program $(OBJS) $(X11_OBJS) $(LDFLAGS) $(X11_LDFLAGS)
-
-.PHONY: distclean
-distclean: clean
-	$(RM) Program
-	$(RM) *~
-
-tests: test-selection
-
-$(LIBRARY): $(OBJS)
-	$(CCC) --shared -o libmyy.so $(OBJS) $(LDFLAGS)
-
-X11/main.o: X11/main.c
-	$(CCC) -c X11/main.c -o X11/main.o
-
-X11/init_window.o: X11/init_window.c X11/init_window.h
-	$(CCC) -c X11/init_window.c -o X11/init_window.o
-
-X11/file.o: X11/helpers/file.c helpers/file.h
-	$(CCC) -c X11/helpers/file.c -o X11/file.o
-
-myy.o: myy.c
-	$(CCC) -c myy.c
-
-base_gl.o: helpers/base_gl.c
-	$(CCC) -c helpers/base_gl.c
-
-klondike.o: cards_logic/klondike.c
-	$(CCC) -c cards_logic/klondike.c
-
-basics.o: cards_logic/basics.c
-	$(CCC) -c cards_logic/basics.c
-
-gl_cards.o: cards_logic/gl_cards.c
-	$(CCC) -c cards_logic/gl_cards.c
-
-menus.o: opengl/menus.c opengl/menus.h
-	$(CCC) -c opengl/menus.c
-
-test-selection.o: tests/test-selection.c
-	$(CCC) -c tests/test-selection.c
-
-test-selection: test-selection.o klondike.o basics.o
-	$(CCC) -o test-selection test-selection.o klondike.o basics.o
-
-test-load-and-save.o: tests/test-load-and-save.c tests/test-utilities.h cards_logic/klondike.c
-	$(CCC) -c tests/test-load-and-save.c
-
-test-load-and-save: test-load-and-save.o klondike.o basics.o
-	$(CCC) -o test-load-and-save test-load-and-save.o klondike.o basics.o
-
-test-quickmove.o: tests/test-quickmove.c tests/test-utilities.h cards_logic/klondike.c
-	$(CCC) -c tests/test-quickmove.c
-
-test-quickmove: test-quickmove.o klondike.o basics.o
-	$(CCC) -o test-quickmove test-quickmove.o klondike.o basics.o
-
-.PHONY: clean
-clean:
-	$(RM) *.{o,so} $(LIBRARY)
-	$(RM) test-*
-
-ANDROID_CFLAGS = -fPIC -D__ANDROID__ -DANDROID -O3 -mthumb -mthumb-interwork -fuse-ld=gold -mfloat-abi=softfp -std=c11 -nostdlib
-ANDROID_BASE_DIR = $(ANDROID_NDK_HOME)/platforms/android-15/arch-arm/usr
 ANDROID_CC = armv7a-hardfloat-linux-gnueabi-gcc
-ANDROID_CCC = $(ANDROID_CC) $(ANDROID_CFLAGS) -I$(ANDROID_BASE_DIR)/include -I.
-ANDROID_LDFLAGS = -Wl,-Bsymbolic,-znow,-soname=libmain.so,--dynamic-linker=/system/bin/linker,--hash-style=sysv -L$(ANDROID_BASE_DIR)/lib -lEGL -lGLESv2 -llog -landroid -lc
-ANDROID_OBJS = android_native_app_glue.o android_dummy_main.o android_file.o
-ANDROID_APK_PATH = ./android/apk
+ANDROID_CFLAGS = -fPIC -D__ANDROID__ -DANDROID -O3 -mthumb -mthumb-interwork -fuse-ld=gold -mfloat-abi=softfp -std=c11 -nostdlib -DDEBUG
+ANDROID_BASE_DIR = $(ANDROID_NDK_HOME)/platforms/android-15/arch-arm/usr
+ANDROID_CCC = $(ANDROID_CC) $(ANDROID_CFLAGS) -I$(ANDROID_BASE_DIR)/include $(INCLUDE_DIRS)
+ANDROID_LIBNAME = libmain.so
+ANDROID_LDFLAGS = -Wl,-Bsymbolic,-znow,-soname=$(ANDROID_LIBNAME),--dynamic-linker=/system/bin/linker,--hash-style=sysv -L$(ANDROID_BASE_DIR)/lib -lEGL -lGLESv2 -llog -landroid -lc
+ANDROID_APK_PATH = ./myy/platforms/android/apk
 ANDROID_APK_LIB_PATH = $(ANDROID_APK_PATH)/app/src/main/jniLibs
 ANDROID_ASSETS_FOLDER = $(ANDROID_APK_PATH)/app/src/main/assets
+ANDROID_SOURCES = $(shell find ./myy/platforms/android -name '*.c')
 
-android_file.o: android/helpers/android_file.c
-	$(CCC) -c android/helpers/android_file.c
+ifeq ($(origin PLATFORM), undefined)
+  PLATFORM = X11
+endif
 
-android_native_app_glue.o: android/android_native_app_glue.c android/android_native_app_glue.h
-	$(CCC) -c android/android_native_app_glue.c
+SOURCES := $(shell find . -name '*.c' -not -path './myy/platforms/*' -not -path './tests/*')
+OBJECTS := $(prefix $(O)/, $(notdir SOURCES))
 
-android_dummy_main.o: android/android_dummy_main.c
-	$(CCC) -c android/android_dummy_main.c
+.PHONY: all
+all: $(PLATFORM)
 
-.PHONY: android
-android: CCC = $(ANDROID_CCC)
-android: OBJS += $(ANDROID_OBJS)
-android: $(OBJS) $(ANDROID_OBJS)
-	$(ANDROID_CCC) --shared -o libmain.so $(OBJS) $(ANDROID_LDFLAGS)
+.PHONY: X11
+X11: $(SOURCES)
+	mkdir -p $(O)
+	$(CCC) -o $(O)/Program $(SOURCES) $(X11_SOURCES) $(LDFLAGS) $(X11_LDFLAGS)
+
+android: $(SOURCES)
+	mkdir -p $(O)
+	$(ANDROID_CCC) --shared -o $(O)/$(ANDROID_LIBNAME) $(SOURCES) $(ANDROID_SOURCES) $(ANDROID_LDFLAGS)
 	mkdir -p $(ANDROID_ASSETS_FOLDER)/textures
 	mkdir -p $(ANDROID_ASSETS_FOLDER)/shaders
 	cp -r shaders/* $(ANDROID_ASSETS_FOLDER)/shaders/
 	cp -r textures/* $(ANDROID_ASSETS_FOLDER)/textures/
-	cp libmain.so $(ANDROID_APK_LIB_PATH)/armeabi/
-	cp libmain.so $(ANDROID_APK_LIB_PATH)/armeabi-v7a/
+	cp $(O)/$(ANDROID_LIBNAME) $(ANDROID_APK_LIB_PATH)/armeabi/
+	cp $(O)/$(ANDROID_LIBNAME) $(ANDROID_APK_LIB_PATH)/armeabi-v7a/
 	$(MAKE) -C $(ANDROID_APK_PATH) install
 
+clean:
+	$(RM) -r .build/*
+	$(MAKE) -C $(ANDROID_APK_PATH) clean
+
+TEST_HEADERS = tests/test-utilities.h
+TEST_COMMON_DEPS = cards_logic/klondike.c cards_logic/basics.c
+TEST_O = $(O)/tests
+TESTS_NAMES = test-selection test-load-and-save test-quickmove
+TESTS_EXECUTABLES = $(addprefix $(TEST_O)/, $(TESTS_NAMES))
+
+$(TEST_O)/test-selection: tests/test-selection.c $(TEST_COMMON_DEPS)
+	$(CCC) -o $(TEST_O)/test-selection $^
+	./$@
+
+$(TEST_O)/test-load-and-save: tests/test-load-and-save.c $(TEST_COMMON_DEPS)
+	$(CCC) -o $(TEST_O)/test-load-and-save $^
+	./$@
+
+$(TEST_O)/test-quickmove: tests/test-quickmove.c $(TEST_COMMON_DEPS)
+	$(CCC) -o $(TEST_O)/test-quickmove $^
+	./$@
+
+.PHONY: create_test_dir
+create_test_dir:
+	mkdir -p $(TEST_O)
+
+.PHONY: tests
+tests: create_test_dir $(TESTS_EXECUTABLES)
+	echo $(TESTS_EXECUTABLES)
+
+.PHONY: generate_tests
+generate_tests: $(TEST_EXECUTABLES)
