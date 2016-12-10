@@ -448,20 +448,7 @@ void save_game() {
 }
 
 void myy_move(int x, int y) {}
-
-
-#define KEY_S 39
-#define KEY_L 46
-#define KEY_KP_0 90
-#define KEY_KP_1 87
-#define KEY_KP_2 88
-#define KEY_KP_3 89
-void myy_key(unsigned int keycode) {
-  if (keycode == KEY_S) save_game();
-  if (keycode == KEY_L) load_game();
-  if (keycode == KEY_KP_0) close_all_menus(&gl_elements);
-  if (keycode == KEY_KP_1) open_menu(pause_menu, &gl_elements);
-}
+void myy_key(unsigned int keycode) {}
 void myy_stop() { myy_cleanup_drawing(); }
 void myy_animating() {}
 void myy_pause() {}

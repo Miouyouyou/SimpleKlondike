@@ -18,8 +18,9 @@ myy/platforms/android/apk/build/*
 myy/platforms/android/apk/.gradle
 myy/platforms/android/apk/app/src/main/assets/shaders
 myy/platforms/android/apk/app/src/main/assets/textures
-Generator/*/*.png
-Generator/*/*.svg
-Generator/*/*.bmp
-Generator/*/*.raw
+Generator/cards/*.svg
+Generator/png/*.png
+Generator/intermediates/*
+Generator/result/*
 Generator/android_icons/drawable*
+

@@ -16,6 +16,17 @@ However, feel free to add support for the platforms you like.
 
 ## X11
 
+### Requirements
+
+* X11 libraries and development headers
+* OpenGL ES 2.x libraries and development headers
+* EGL libraries and development headers
+* C Compiler
+* The following tools :
+ * find
+ * sed
+ * xdg-desktop-menu
+
 ### Quick version
 
 ```bash
@@ -37,6 +48,16 @@ Then :
 
 ## Android
 
+### Requirements
+
+* A Cross-compiling C compiler
+* Android SDK Build tools 25.0.1
+* Android SDK Platform-tools 25.0.1
+* Android SDK Platform 25 (Android 7.1.1)
+* Make
+* find
+* An Android ARM phone, or an Android ARM emulator with OpenGL ES 2.x support
+
 ### Quick version
 
 ```bash
@@ -51,6 +72,34 @@ make android_install
  * TODO: Currently, the Makefile does not use the capabitilies of the Android NDK.
 * `make android_install` will install the APK file into the plugged ARM phone / ARM emulator.
 * `make android_uninstall` will remove the APK file from the plugged ARM phone / ARM emulator.
+
+# Regenerating the textures
+
+## Requirements
+
+* Ruby (to generate all the SVG from SVG templates)
+ * [**myy_color**](https://github.com/Miouyouyou/myy-color) 0.1 (`myy_bmp2raw`)
+* ImageMagick (`convert` and `montage`)
+* Inkscape (to convert the SVG to PNG)
+
+## Procedure
+
+To regenerate the textures, run `convert.sh` in the **Generator** folder.
+
+## Quick explanation
+
+The generator will :
+* Generate 56 cards SVG (52 cards + 4 stack marks) in the `cards` sub-folder using `svg_cards_generator.rb`
+* Convert all the SVG in the current folder and `cards` sub-folder, to PNG files in the `png` folder, using Inkscape
+* Generate a **montage** of all the 56 cards, the back card picture, the 'reset pool' mark and the selection mark.
+* **Extent** the previous montage to add some width padding and copy it to `result/cards_texture.bmp`
+ * Currently, the padding is done by adding a part of the background texture to it. However, this part is not used in the game.
+ * The width padding is used so that each card takes 1/16 of the texture in width.
+* Convert `result/cards_texture.bmp` to `result/all_cards_tex.raw` using `myy_bmp2raw`
+
+* Generate a **montage** of all the menu PNG in the `menus` sub-folder
+* `convert` the previous montage to `result/menus.bmp`
+* Convert `result/menus.bmp` to `result/menus.raw` using `myy_bmp2raw`
 
 # Money !
 
