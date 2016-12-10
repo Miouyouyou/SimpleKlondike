@@ -12,7 +12,9 @@ Program
 /*.config
 /test-*
 *.save
+.build
 myy/platforms/android/apk/app/build/*
+myy/platforms/android/apk/build/*
 myy/platforms/android/apk/.gradle
 myy/platforms/android/apk/app/src/main/assets/shaders
 myy/platforms/android/apk/app/src/main/assets/textures

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Simple Klondike
+Comment=A basic Klondike (Solitaire) game
+Encoding=UTF-8
+Exec=~/.local/games/SimpleKlondike/SimpleKlondike
+Icon=~/.local/games/SimpleKlondike/SimpleKlondike.png
+Path=~/.local/games/SimpleKlondike
+Terminal=false
+Type=Application
+Categories=Game;BoardGame;
+

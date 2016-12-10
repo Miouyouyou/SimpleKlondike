@@ -1,7 +1,3 @@
- [ ] Wrap filesystems operations around abstract functions implemented
-     in the different Operating System management source code.
-     For example :
-     - On Android, wrap these functions around AAssetsManager
-     - On PC, wrap these functions around open/close
- [ ] Restart menu
- [ ] Winning menu
+  [ ] Use the Android NDK to compile and generate the libraries, 
+      in order to target more platforms.
+ 

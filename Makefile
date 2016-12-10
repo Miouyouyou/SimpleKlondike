@@ -30,13 +30,30 @@ endif
 SOURCES := $(shell find . -name '*.c' -not -path './myy/platforms/*' -not -path './tests/*')
 OBJECTS := $(prefix $(O)/, $(notdir SOURCES))
 
+INSTALL_FOLDER = ~/.local/games/SimpleKlondike
+
 .PHONY: all
 all: $(PLATFORM)
 
 .PHONY: X11
 X11: $(SOURCES)
 	mkdir -p $(O)
-	$(CCC) -o $(O)/Program $(SOURCES) $(X11_SOURCES) $(LDFLAGS) $(X11_LDFLAGS)
+	$(CCC) -o $(O)/SimpleKlondike $(SOURCES) $(X11_SOURCES) $(LDFLAGS) $(X11_LDFLAGS)
+
+install: X11
+	mkdir -p $(INSTALL_FOLDER)
+	sed -e "s|~|$(HOME)|g" SimpleKlondike.desktop > $(O)/Miouyouyou-SimpleKlondike.desktop
+	cp -r $(O)/SimpleKlondike SimpleKlondike.png textures shaders $(INSTALL_FOLDER)
+	xdg-desktop-menu install $(O)/Miouyouyou-SimpleKlondike.desktop
+
+uninstall:
+	rm $(INSTALL_FOLDER)/SimpleKlondike*
+	rm $(INSTALL_FOLDER)/textures/*
+	rm $(INSTALL_FOLDER)/shaders/*
+	rmdir $(INSTALL_FOLDER)/*
+	mkdir -p $(O)
+	sed -e "s|~|$(HOME)|g" SimpleKlondike.desktop > $(O)/Miouyouyou-SimpleKlondike.desktop
+	xdg-desktop-menu uninstall $(O)/Miouyouyou-SimpleKlondike.desktop
 
 android: $(SOURCES)
 	mkdir -p $(O)
@@ -47,9 +64,16 @@ android: $(SOURCES)
 	cp -r textures/* $(ANDROID_ASSETS_FOLDER)/textures/
 	cp $(O)/$(ANDROID_LIBNAME) $(ANDROID_APK_LIB_PATH)/armeabi/
 	cp $(O)/$(ANDROID_LIBNAME) $(ANDROID_APK_LIB_PATH)/armeabi-v7a/
+	$(MAKE) -C $(ANDROID_APK_PATH)
+
+android_install: android
 	$(MAKE) -C $(ANDROID_APK_PATH) install
 
+android_uninstall:
+	$(MAKE) -C $(ANDROID_APK_PATH) uninstall
+
 clean:
+	$(RM) SimpleKlondike
 	$(RM) -r .build/*
 	$(MAKE) -C $(ANDROID_APK_PATH) clean
 
