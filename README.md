@@ -56,7 +56,7 @@ make android_install
 
 I accept bribes and donations !
 
-[Pledgie !](https://pledgie.com/campaigns/33063)
+[![Pledgie !](https://pledgie.com/campaigns/33063.png)](https://pledgie.com/campaigns/33063)
 
 BTC: 16zwQUkG29D49G6C7pzch18HjfJqMXFNrW
 
